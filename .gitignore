@@ -1,0 +1,4 @@
+backend/.env
+backend/node_modules/
+mobile_app/.dart_tool/
+mobile_app/build/
