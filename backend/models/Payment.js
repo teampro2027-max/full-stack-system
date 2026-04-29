@@ -65,6 +65,9 @@ const paymentSchema = new mongoose.Schema({
     },
     phoneNumber: {
         type: String
+    },
+    receiverPhone: {
+        type: String
     }
 }, { timestamps: true });
 

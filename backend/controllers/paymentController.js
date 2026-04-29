@@ -72,7 +72,8 @@ const processWaafiPayment = async (req, res) => {
             provider: 'WaafiPay',
             status: 'pending',
             phoneNumber: normalizedPhone,
-            description: description || `Payment for ${bill.title || 'bill'}`
+            receiverPhone: receiverPhone,
+            description: description || `Payment for ${bill.title || 'bill'} to ${receiverPhone}`
         });
 
         // Building the REAL WaafiPay API_PURCHASE payload

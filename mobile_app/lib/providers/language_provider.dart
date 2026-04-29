@@ -67,6 +67,7 @@ class LanguageProvider with ChangeNotifier {
       'paymentCompleted': 'Payment completed successfully.',
       'fillAllFields': 'Please fill all required fields.',
       'edit': 'Edit',
+      'receiverNumber': 'Receiver Number',
     },
     'so': {
       'appTitle': 'MultiBill',
@@ -129,6 +130,7 @@ class LanguageProvider with ChangeNotifier {
       'paymentCompleted': 'Lacag bixintu si guul ah ayay u dhacday.',
       'fillAllFields': 'Fadlan buuxi dhammaan goobaha loo baahan yahay.',
       'edit': 'Wax ka beddel',
+      'receiverNumber': 'Lambarka Loo Diray',
     },
   };
 
