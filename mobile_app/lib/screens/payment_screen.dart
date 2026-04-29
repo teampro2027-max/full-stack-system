@@ -26,7 +26,8 @@ class _PaymentScreenState extends State<PaymentScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _amountController = TextEditingController(
-      text: (widget.bill['amount'] as num?)?.toStringAsFixed(2) ??
+      text:
+          (widget.bill['amount'] as num?)?.toStringAsFixed(2) ??
           widget.bill['amount'].toString(),
     );
     _receiverPhoneController = TextEditingController();
@@ -59,9 +60,7 @@ class _PaymentScreenState extends State<PaymentScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Payment'),
-        content: Text(
-          'Pay \$$amount using registered phone number $phone?',
-        ),
+        content: Text('Pay \$$amount using registered phone number $phone?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -101,7 +100,9 @@ class _PaymentScreenState extends State<PaymentScreen>
     // We can still require it here for app security if desired, or skip it.
     if (pin.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fadlan geli PIN-kaaga si aad u xaqiijiso')),
+        const SnackBar(
+          content: Text('Fadlan geli PIN-kaaga si aad u xaqiijiso'),
+        ),
       );
       return;
     }
@@ -162,16 +163,17 @@ class _PaymentScreenState extends State<PaymentScreen>
               '_id': 'STR${DateTime.now().millisecondsSinceEpoch}',
               'status': 'success',
               'transactionId': res['clientSecret'].split('_secret')[0],
-              'amount': amount
+              'amount': amount,
             },
             'message': 'Card Payment Successful',
             'ussdInstructions': '',
-          }
+          },
         },
       );
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -214,7 +216,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                         color: Colors.indigo.withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
-                      )
+                      ),
                     ],
                   ),
                   child: Column(
@@ -246,7 +248,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                           decoration: InputDecoration(
                             labelText: 'Amount to Pay (USD)',
                             labelStyle: const TextStyle(
-                              color: Colors.white,
+                              color: Colors.blue,
                               fontSize: 16,
                               fontWeight: FontWeight.normal,
                             ),
@@ -261,8 +263,6 @@ class _PaymentScreenState extends State<PaymentScreen>
                               fontWeight: FontWeight.bold,
                             ),
                             border: InputBorder.none,
-                            filled: false,
-                            fillColor: Colors.transparent,
                             floatingLabelBehavior: FloatingLabelBehavior.always,
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 20,
@@ -290,11 +290,10 @@ class _PaymentScreenState extends State<PaymentScreen>
                       borderRadius: BorderRadius.circular(21),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              const Color(0xFF4F46E5).withOpacity(0.2),
+                          color: const Color(0xFF4F46E5).withOpacity(0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
-                        )
+                        ),
                       ],
                     ),
                     labelColor: Colors.white,
@@ -325,8 +324,9 @@ class _PaymentScreenState extends State<PaymentScreen>
                                 color: const Color(0xFF10B981).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color:
-                                      const Color(0xFF10B981).withOpacity(0.3),
+                                  color: const Color(
+                                    0xFF10B981,
+                                  ).withOpacity(0.3),
                                 ),
                               ),
                               child: const Row(
@@ -381,9 +381,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey.shade200,
-                                ),
+                                border: Border.all(color: Colors.grey.shade200),
                               ),
                               child: Text(
                                 hasRegisteredPhone
@@ -435,7 +433,10 @@ class _PaymentScreenState extends State<PaymentScreen>
                                     fontWeight: FontWeight.normal,
                                     letterSpacing: 0,
                                   ),
-                                  prefixIcon: const Icon(Icons.phone_android, color: Color(0xFF4F46E5)),
+                                  prefixIcon: const Icon(
+                                    Icons.phone_android,
+                                    color: Color(0xFF4F46E5),
+                                  ),
                                   contentPadding: const EdgeInsets.all(18),
                                   border: InputBorder.none,
                                 ),
@@ -474,7 +475,10 @@ class _PaymentScreenState extends State<PaymentScreen>
                                 decoration: const InputDecoration(
                                   hintText: '****',
                                   hintStyle: TextStyle(letterSpacing: 0),
-                                  prefixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                                  prefixIcon: Icon(
+                                    Icons.lock_outline,
+                                    color: Colors.grey,
+                                  ),
                                   contentPadding: EdgeInsets.all(18),
                                   border: InputBorder.none,
                                   counterText: '',
@@ -493,7 +497,9 @@ class _PaymentScreenState extends State<PaymentScreen>
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 elevation: 4,
-                                shadowColor: const Color(0xFF10B981).withOpacity(0.4),
+                                shadowColor: const Color(
+                                  0xFF10B981,
+                                ).withOpacity(0.4),
                               ),
                               child: _loading
                                   ? const CircularProgressIndicator(
@@ -575,11 +581,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
-                                  child: _cardField(
-                                    'CVV',
-                                    '***',
-                                    Icons.lock,
-                                  ),
+                                  child: _cardField('CVV', '***', Icons.lock),
                                 ),
                               ],
                             ),
@@ -618,42 +620,42 @@ class _PaymentScreenState extends State<PaymentScreen>
                       ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
     );
   }
 
   Widget _cardField(String label, String hint, IconData icon) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-              color: Colors.grey.shade700,
-            ),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: Colors.grey.shade700,
+        ),
+      ),
+      const SizedBox(height: 6),
+      TextField(
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon, size: 18, color: Colors.grey),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200),
           ),
-          const SizedBox(height: 6),
-          TextField(
-            decoration: InputDecoration(
-              hintText: hint,
-              prefixIcon: Icon(icon, size: 18, color: Colors.grey),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-            ),
-          )
-        ],
-      );
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+        ),
+      ),
+    ],
+  );
 
   Widget _buildResult(LanguageProvider lang) {
     final data = _result!['data'] as Map<String, dynamic>;
@@ -685,10 +687,11 @@ class _PaymentScreenState extends State<PaymentScreen>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        (isSuccess ? Colors.green : Colors.red).withOpacity(0.3),
+                    color: (isSuccess ? Colors.green : Colors.red).withOpacity(
+                      0.3,
+                    ),
                     blurRadius: 20,
-                  )
+                  ),
                 ],
               ),
               child: Icon(

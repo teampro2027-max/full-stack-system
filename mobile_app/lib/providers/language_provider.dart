@@ -54,6 +54,15 @@ class LanguageProvider with ChangeNotifier {
       'noNotifications': 'No notifications yet',
       'phoneNumber': 'Phone Number',
       'reports': 'Reports',
+      'general': 'General',
+      'security': 'Security',
+      'info': 'Information',
+      'fullName': 'Full Name',
+      'phoneNumber': 'Phone Number',
+      'account': 'Account',
+      'update': 'Update',
+      'save': 'Save Changes',
+      'edit': 'Edit',
     },
     'so': {
       'appTitle': 'MultiBill',
@@ -103,6 +112,15 @@ class LanguageProvider with ChangeNotifier {
       'noNotifications': 'Weli ma jiraan ogeysiiyo',
       'phoneNumber': 'Lambaraha Telefoonka',
       'reports': 'Warbixinada',
+      'general': 'Guud',
+      'security': 'Amniga',
+      'info': 'Macluumaadka',
+      'fullName': 'Magaca oo Buuxa',
+      'phoneNumber': 'Lambarka Taleefonka',
+      'account': 'Koontada',
+      'update': 'Cusboonaysii',
+      'save': 'Kaydi Isbedelka',
+      'edit': 'Wax ka beddel',
     }
   };
 

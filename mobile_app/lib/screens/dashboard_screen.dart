@@ -10,6 +10,7 @@ import 'payment_history_screen.dart';
 import 'profile_screen.dart';
 import 'notification_screen.dart';
 import 'reports_screen.dart';
+import 'settings_screen.dart';
 import '../providers/notification_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -506,6 +507,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icons.add_circle_outline,
             title: lang.t('addBill'),
             onTap: _openAddBillFromDrawer,
+          ),
+          _drawerItem(
+            icon: Icons.settings_outlined,
+            title: lang.t('settings'),
+            onTap: () => _openDrawerScreen(const SettingsScreen()),
           ),
           const Spacer(),
           const Divider(height: 1),
