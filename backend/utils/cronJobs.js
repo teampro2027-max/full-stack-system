@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const Bill = require('../models/Bill');
 const Notification = require('../models/Notification');
+const { sendPushNotification } = require('../controllers/notificationController');
 
 // Run everyday at 8:00 AM
 const setupCronJobs = () => {
@@ -19,10 +20,13 @@ const setupCronJobs = () => {
             });
 
             for (let bill of upcomingBills) {
+                const msg = `Xasuusin: Biilkaaga ${bill.category} ($${bill.amount}) waxaa ka haray wakhti yar.`;
                 await Notification.create({
                     userId: bill.userId,
-                    message: `Reminder: Your ${bill.category} bill of $${bill.amount} is due on ${new Date(bill.dueDate).toLocaleDateString()}.`
+                    title: 'Xasuusin Biil',
+                    message: msg
                 });
+                await sendPushNotification(bill.userId, 'Xasuusin Biil', msg);
             }
 
             // 2. Check for overdue bills
@@ -35,15 +39,44 @@ const setupCronJobs = () => {
                 bill.status = 'overdue';
                 await bill.save();
 
+                const msg = `Digniin: Biilkaaga ${bill.category} ($${bill.amount}) wakhtigii waa ka dhacay!`;
                 await Notification.create({
                     userId: bill.userId,
-                    message: `Alert: Your ${bill.category} bill of $${bill.amount} is OVERDUE.`
+                    title: 'Biil Wakhtigii dhaafay',
+                    message: msg
                 });
+                await sendPushNotification(bill.userId, 'Biil Wakhtigii dhaafay', msg);
             }
 
             console.log('Finished daily cron jobs successfully.');
         } catch (error) {
             console.error('Error running cron jobs:', error.message);
+        }
+    });
+
+    // 3. Monthly Reset: Markay bishu dhalato (1st of every month at midnight)
+    cron.schedule('0 0 1 * *', async () => {
+        console.log('Running monthly bill status reset and notification');
+        try {
+            // Hel dhammaan biilashii horey loo bixiyey
+            const paidBills = await Bill.find({ status: 'paid' });
+
+            for (let bill of paidBills) {
+                bill.status = 'unpaid';
+                await bill.save();
+
+                const msg = `Bishii cusub ayaa dhalatay! Biilkaaga "${bill.title}" hadda waa furan yahay, waad bixin kartaa.`;
+                
+                await Notification.create({
+                    userId: bill.userId,
+                    title: 'Biil Cusub oo Furan',
+                    message: msg
+                });
+
+                await sendPushNotification(bill.userId, 'Biil Cusub oo Furan', msg);
+            }
+        } catch (error) {
+            console.error('Monthly reset error:', error.message);
         }
     });
 };

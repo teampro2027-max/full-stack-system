@@ -62,6 +62,10 @@ class LanguageProvider with ChangeNotifier {
       'account': 'Account',
       'update': 'Update',
       'save': 'Save Changes',
+      'paymentSuccessful': 'Payment Successful!',
+      'paymentFailed': 'Payment Failed!',
+      'paymentCompleted': 'Payment completed successfully.',
+      'fillAllFields': 'Please fill all required fields.',
       'edit': 'Edit',
     },
     'so': {
@@ -120,8 +124,12 @@ class LanguageProvider with ChangeNotifier {
       'account': 'Koontada',
       'update': 'Cusboonaysii',
       'save': 'Kaydi Isbedelka',
+      'paymentSuccessful': 'Lacag Bixintu Guuleysatay!',
+      'paymentFailed': 'Lacag Bixintu Ku Guul Daratay!',
+      'paymentCompleted': 'Lacag bixintu si guul ah ayay u dhacday.',
+      'fillAllFields': 'Fadlan buuxi dhammaan goobaha loo baahan yahay.',
       'edit': 'Wax ka beddel',
-    }
+    },
   };
 
   LanguageProvider() {
@@ -141,5 +149,6 @@ class LanguageProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  String t(String key) => _translations[_lang]?[key] ?? _translations['en']?[key] ?? key;
+  String t(String key) =>
+      _translations[_lang]?[key] ?? _translations['en']?[key] ?? key;
 }

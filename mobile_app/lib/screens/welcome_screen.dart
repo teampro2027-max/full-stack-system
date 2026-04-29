@@ -53,47 +53,46 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 160,
-                            height: 160,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEEF2FF),
-                              shape: BoxShape.circle,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.all(24.0),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight > 48
+                                  ? constraints.maxHeight - 48
+                                  : 0,
                             ),
                             child: const Center(
-                              child: Icon(
-                                Icons.phone_iphone_outlined,
-                                size: 72,
-                                color: Color(0xFF4F46E5),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _WelcomeIllustration(),
+                                  SizedBox(height: 28),
+                                  Text(
+                                    'Keep every bill in one place and pay on time.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Quickly track due dates, payments, and invoices with one clean dashboard.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          const SizedBox(height: 28),
-                          const Text(
-                            'Keep every bill in one place and pay on time.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1F2937),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Quickly track due dates, payments, and invoices with one clean dashboard.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -134,6 +133,29 @@ class WelcomeScreen extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WelcomeIllustration extends StatelessWidget {
+  const _WelcomeIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 160,
+      height: 160,
+      decoration: const BoxDecoration(
+        color: Color(0xFFEEF2FF),
+        shape: BoxShape.circle,
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.phone_iphone_outlined,
+          size: 72,
+          color: Color(0xFF4F46E5),
         ),
       ),
     );

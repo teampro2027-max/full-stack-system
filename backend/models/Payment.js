@@ -17,7 +17,7 @@ const paymentSchema = new mongoose.Schema({
     },
     method: {
         type: String,
-        enum: ['EVC', 'Stripe', 'WaafiPay'],
+        enum: ['EVC', 'WaafiPay'],
         required: true
     },
     status: {

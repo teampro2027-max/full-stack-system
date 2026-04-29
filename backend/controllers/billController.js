@@ -1,5 +1,6 @@
 const Bill = require('../models/Bill');
 const Notification = require('../models/Notification');
+const { sendPushNotification } = require('./notificationController');
 
 const getBills = async (req, res) => {
     try {
@@ -31,10 +32,15 @@ const createBill = async (req, res) => {
         });
 
         // Create notification for the user
+        const msg = `Biil cusub oo ${category} ah ("${title}") oo dhan $${amount} ayaa laguu soo saaray.`;
         await Notification.create({
             userId: targetUserId,
-            message: `A new ${category} bill "${title}" for $${amount} has been issued.`
+            title: 'Biil Cusub',
+            message: msg
         });
+
+        // U dir Push Notification
+        await sendPushNotification(targetUserId, 'Biil Cusub', msg);
 
         res.status(201).json(bill);
     } catch (error) {

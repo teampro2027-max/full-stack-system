@@ -4,7 +4,7 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const AuditLog = require('../models/AuditLog');
 const { generateReceiptPDF } = require('../utils/pdfGenerator');
-const Stripe = require('stripe');
+const { sendPushNotification } = require('./notificationController');
 const {
     normalizePhoneNumber,
     isValidWaafiPhoneNumber,
@@ -15,8 +15,6 @@ const {
     sendWaafiRequest,
     isWaafiSuccessResponse
 } = require('../utils/waafiPay');
-
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const createPaymentWithUniqueIds = async (paymentData) => {
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -109,17 +107,25 @@ const processWaafiPayment = async (req, res) => {
         payment.paidDate = new Date();
         await payment.save();
 
-        if (isSuccess && payment.amount >= Number(bill.amount)) {
+        // Hadda biilka waxaa loo calaamadeynayaa 'paid' haddii lacag kasta ay guuleysato
+        if (isSuccess) {
             bill.status = 'paid';
             await bill.save();
         }
 
+        const notificationTitle = isSuccess ? 'Lacag-bixin Guuleysatay' : 'Lacag-bixin Fashilantay';
+        const notificationMsg = isSuccess
+            ? `Lacagtaada $${payment.amount} ee "${bill.title}" waa lagaa aqbalay.`
+            : `Lacag-bixintii "${bill.title}" way fashilantay: ${responseBody.responseMsg || 'Cillad ayaa dhacday'}`;
+
         await Notification.create({
             userId: req.user._id,
-            message: isSuccess
-                ? `Payment of $${payment.amount} for "${bill.title}" was successful.`
-                : `Payment for "${bill.title}" failed: ${responseBody.responseMsg || 'Unknown error'}`
+            title: notificationTitle,
+            message: notificationMsg
         });
+
+        // U dir Push Notification talefanka
+        await sendPushNotification(req.user._id, notificationTitle, notificationMsg);
 
         await AuditLog.create({
             userId: req.user._id,
@@ -163,39 +169,6 @@ const processWaafiPayment = async (req, res) => {
     }
 };
 
-const processStripePayment = async (req, res) => {
-    const { billId, amount } = req.body;
-    try {
-        const bill = await Bill.findById(billId);
-        if (!bill) return res.status(404).json({ message: 'Bill not found' });
-
-        const numericAmount = Number(amount);
-        if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-            return res.status(400).json({ message: 'Amount must be greater than zero' });
-        }
-
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(numericAmount * 100),
-            currency: 'usd',
-            metadata: { billId: bill._id.toString(), userId: req.user._id.toString() }
-        });
-
-        await Payment.create({
-            billId,
-            userId: req.user._id,
-            amount: Number(numericAmount.toFixed(2)),
-            method: 'Stripe',
-            status: 'pending',
-            provider: 'Stripe',
-            transactionId: paymentIntent.id
-        });
-
-        res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
 const getPaymentHistory = async (req, res) => {
     try {
         const query = req.user.role === 'admin' ? {} : { userId: req.user._id };
@@ -232,7 +205,6 @@ const downloadReceipt = async (req, res) => {
 
 module.exports = {
     processWaafiPayment,
-    processStripePayment,
     getPaymentHistory,
     downloadReceipt
 };
