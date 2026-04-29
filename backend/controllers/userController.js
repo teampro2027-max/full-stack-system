@@ -45,6 +45,12 @@ const updateUserProfile = async (req, res) => {
         if (user) {
             user.name = req.body.name || user.name;
             user.phone = req.body.phone || user.phone;
+            user.profilePicture = req.body.profilePicture || user.profilePicture;
+
+            if (req.body.password) {
+                user.password = req.body.password;
+            }
+
             // Only update email if provided and not already used
             if (req.body.email && req.body.email !== user.email) {
                 const emailExists = await User.findOne({ email: req.body.email });
@@ -60,6 +66,7 @@ const updateUserProfile = async (req, res) => {
                 name: updatedUser.name,
                 email: updatedUser.email,
                 phone: updatedUser.phone,
+                profilePicture: updatedUser.profilePicture,
                 role: updatedUser.role,
                 mfaEnabled: updatedUser.mfaEnabled,
                 preferredLanguage: updatedUser.preferredLanguage,

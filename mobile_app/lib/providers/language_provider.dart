@@ -67,7 +67,11 @@ class LanguageProvider with ChangeNotifier {
       'paymentCompleted': 'Payment completed successfully.',
       'fillAllFields': 'Please fill all required fields.',
       'edit': 'Edit',
+      'changePassword': 'Change Password',
+      'newPassword': 'New Password',
+      'uploadPhoto': 'Upload Profile Picture',
       'receiverNumber': 'Receiver Number',
+      'amountTooSmall': 'Amount must be greater than 0.01.',
     },
     'so': {
       'appTitle': 'MultiBill',
@@ -130,7 +134,11 @@ class LanguageProvider with ChangeNotifier {
       'paymentCompleted': 'Lacag bixintu si guul ah ayay u dhacday.',
       'fillAllFields': 'Fadlan buuxi dhammaan goobaha loo baahan yahay.',
       'edit': 'Wax ka beddel',
+      'changePassword': 'Baddal Ereyga Sirta ah',
+      'newPassword': 'Erey Sir ah oo Cusub',
+      'uploadPhoto': 'Soo geli Sawirka Profile-ka',
       'receiverNumber': 'Lambarka Loo Diray',
+      'amountTooSmall': 'Qaddarka waa inuu ka weynaadaa 0.01.',
     },
   };
 

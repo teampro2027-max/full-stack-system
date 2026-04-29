@@ -8,7 +8,9 @@ import '../services/notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final _storage = const FlutterSecureStorage();
-  final String _baseUrl = kIsWeb ? 'http://localhost:5000/api' : 'http://10.0.2.2:5000/api';
+  final String _baseUrl = kIsWeb
+      ? 'http://localhost:5000/api'
+      : 'http://10.0.2.2:5000/api';
 
   String? _token;
   Map<String, dynamic>? _user;
@@ -40,10 +42,10 @@ class AuthProvider with ChangeNotifier {
         _token = data['token'];
         _user = data;
         if (_token != null) {
-            await _storage.write(key: 'jwt', value: _token!);
-            await _storage.write(key: 'user', value: json.encode(data));
-            // Update FCM token on server after login
-            NotificationService.updateTokenOnServer();
+          await _storage.write(key: 'jwt', value: _token!);
+          await _storage.write(key: 'user', value: json.encode(data));
+          // Update FCM token on server after login
+          NotificationService.updateTokenOnServer();
         }
         notifyListeners();
       } else {
@@ -66,7 +68,11 @@ class AuthProvider with ChangeNotifier {
       final response = await http.post(
         Uri.parse('$_baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password, 'mfaToken': token}),
+        body: json.encode({
+          'email': email,
+          'password': password,
+          'mfaToken': token,
+        }),
       );
       final data = json.decode(response.body);
       if (response.statusCode == 200) {
@@ -88,7 +94,12 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> register(String name, String email, String password, String phone) async {
+  Future<void> register(
+    String name,
+    String email,
+    String password,
+    String phone,
+  ) async {
     _isLoading = true;
     notifyListeners();
 
@@ -144,6 +155,13 @@ class AuthProvider with ChangeNotifier {
     _user = null;
     await _storage.delete(key: 'jwt');
     await _storage.delete(key: 'user');
+    notifyListeners();
+  }
+
+  // Cusboonaysii xogta isticmaalaha ee gudaha app-ka iyo kaydinta
+  Future<void> updateLocalUser(Map<String, dynamic> userData) async {
+    _user = userData;
+    await _storage.write(key: 'user', value: json.encode(userData));
     notifyListeners();
   }
 }
