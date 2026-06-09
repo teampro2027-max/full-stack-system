@@ -17,26 +17,13 @@ class _AddBillScreenState extends State<AddBillScreen> {
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
 
-  String _category = 'electricity';
+  String _category = '';
   DateTime _dueDate = DateTime.now().add(const Duration(days: 7));
   bool _isRecurring = false;
   String _recurringInterval = 'monthly';
   bool _loading = false;
   bool _voiceMode = false;
   final _voiceController = TextEditingController();
-
-  final List<Map<String, dynamic>> _categories = [
-    {'key': 'electricity', 'label': 'Electricity Bill', 'icon': 'âš¡'},
-    {'key': 'water', 'label': 'Water Bill', 'icon': 'ðŸ’§'},
-    {'key': 'internet', 'label': 'Internet Bill', 'icon': 'ðŸŒ'},
-    {'key': 'rent', 'label': 'Rent Payment', 'icon': 'ðŸ '},
-    {'key': 'school_fees', 'label': 'School Fees', 'icon': 'ðŸŽ“'},
-    {'key': 'mobile_postpaid', 'label': 'Mobile Postpaid', 'icon': 'ðŸ“±'},
-    {'key': 'tv_subscription', 'label': 'TV Subscription', 'icon': 'ðŸ“º'},
-    {'key': 'waste_collection', 'label': 'Waste Collection', 'icon': 'ðŸ—‘ï¸'},
-    {'key': 'loan_installment', 'label': 'Loan Installment', 'icon': 'ðŸ’°'},
-    {'key': 'government_license', 'label': 'Gov. License', 'icon': 'ðŸ“‹'},
-  ];
 
   @override
   void initState() {
@@ -46,7 +33,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
       _titleController.text = b['title'] ?? '';
       _amountController.text = '${b['amount'] ?? ''}';
       _notesController.text = b['notes'] ?? '';
-      _category = b['category'] ?? 'electricity';
+      _category = b['category'] ?? '';
       _isRecurring = b['isRecurring'] ?? false;
       _recurringInterval = b['recurringInterval'] ?? 'monthly';
       if (b['dueDate'] != null) {
@@ -178,12 +165,19 @@ class _AddBillScreenState extends State<AddBillScreen> {
                           // Simple parser
                           final amountMatch = RegExp(r'(\d+(\.\d{1,2})?)').firstMatch(text);
                           if (amountMatch != null) _amountController.text = amountMatch.group(1)!;
-                          final catMap = {'electricity': 'electricity', 'water': 'water', 'internet': 'internet', 'rent': 'rent', 'school': 'school_fees', 'mobile': 'mobile_postpaid', 'tv': 'tv_subscription', 'waste': 'waste_collection', 'loan': 'loan_installment', 'license': 'government_license'};
-                          for (final e in catMap.entries) {
-                            if (text.contains(e.key)) { setState(() => _category = e.value); break; }
+                          
+                          final billProvider = Provider.of<BillProvider>(context, listen: false);
+                          final categories = billProvider.categories;
+                          
+                          for (final cat in categories) {
+                            if (text.contains(cat['name'].toString().toLowerCase())) { 
+                              setState(() => _category = cat['key']); 
+                              break; 
+                            }
                           }
-                          if (_titleController.text.isEmpty) {
-                            _titleController.text = '${_categories.firstWhere((c) => c['key'] == _category)['label']} (Voice)';
+                          if (_titleController.text.isEmpty && _category.isNotEmpty) {
+                            final matchedCat = categories.firstWhere((c) => c['key'] == _category, orElse: () => {'name': 'Bill'});
+                            _titleController.text = '${matchedCat['name']} (Voice)';
                           }
                           setState(() => _voiceMode = false);
                         },
@@ -205,35 +199,54 @@ class _AddBillScreenState extends State<AddBillScreen> {
               const SizedBox(height: 16),
 
               _label(lang.t('category')),
-              SizedBox(
-                height: 52,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _categories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (ctx, i) {
-                    final cat = _categories[i];
-                    final selected = _category == cat['key'];
-                    return GestureDetector(
-                      onTap: () => setState(() => _category = cat['key']),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: selected ? const Color(0xFF4F46E5) : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: selected ? const Color(0xFF4F46E5) : Colors.grey.shade200),
-                          boxShadow: selected ? [BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4))] : [],
-                        ),
-                        child: Row(children: [
-                          Text(cat['icon'], style: const TextStyle(fontSize: 16)),
-                          const SizedBox(width: 6),
-                          Text(cat['label'], style: TextStyle(color: selected ? Colors.white : Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w600)),
-                        ]),
-                      ),
+              Consumer<BillProvider>(
+                builder: (context, provider, child) {
+                  final categories = provider.categories;
+                  if (categories.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text('No categories available', style: TextStyle(color: Colors.grey)),
                     );
-                  },
-                ),
+                  }
+                  
+                  if (_category.isEmpty && categories.isNotEmpty) {
+                    // Set initial category if empty
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) setState(() => _category = categories[0]['key']);
+                    });
+                  }
+
+                  return SizedBox(
+                    height: 52,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: categories.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (ctx, i) {
+                        final cat = categories[i];
+                        final selected = _category == cat['key'];
+                        return GestureDetector(
+                          onTap: () => setState(() => _category = cat['key']),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: selected ? const Color(0xFF4F46E5) : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: selected ? const Color(0xFF4F46E5) : Colors.grey.shade200),
+                              boxShadow: selected ? [BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                            ),
+                            child: Row(children: [
+                              Text(cat['icon'] ?? '📋', style: const TextStyle(fontSize: 16)),
+                              const SizedBox(width: 6),
+                              Text(cat['name'], style: TextStyle(color: selected ? Colors.white : Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w600)),
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                }
               ),
               const SizedBox(height: 16),
 

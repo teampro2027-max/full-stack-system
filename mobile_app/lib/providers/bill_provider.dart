@@ -3,9 +3,11 @@ import '../services/api_service.dart';
 
 class BillProvider with ChangeNotifier {
   List<dynamic> _bills = [];
+  List<dynamic> _categories = [];
   bool _isLoading = false;
 
   List<dynamic> get bills => _bills;
+  List<dynamic> get categories => _categories;
   bool get isLoading => _isLoading;
 
   List<dynamic> get upcomingBills => _bills
@@ -23,9 +25,21 @@ class BillProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _bills = await ApiService.get('/bills');
+      // Fetch bills and categories separately to avoid type casting issues
+      final billsResult = await ApiService.get('/bills');
+      _bills = (billsResult is List) ? List<dynamic>.from(billsResult) : [];
     } catch (e) {
       _bills = [];
+    }
+    // Fetch categories separately (no auth required)
+    try {
+      final catResult = await ApiService.get('/categories');
+      final rawList = catResult is Map ? (catResult['categories'] ?? []) : [];
+      _categories = (rawList as List<dynamic>)
+          .where((c) => c['active'] == true)
+          .toList();
+    } catch (e) {
+      _categories = [];
     }
     _isLoading = false;
     notifyListeners();

@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
+
+dotenv.config({ override: true });
+
 const User = require('./models/User');
 const Bill = require('./models/Bill');
 const Payment = require('./models/Payment');
-
-dotenv.config();
 
 const seed = async () => {
     try {
@@ -25,7 +26,7 @@ const seed = async () => {
             email: 'admin@admin.com',
             password: adminPassword,
             role: 'admin',
-            mfaEnabled: true
+            mfaEnabled: false
         });
 
         // 2. Create a Regular User

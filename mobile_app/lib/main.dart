@@ -84,18 +84,13 @@ class MultiBillApp extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF4F46E5),
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2),
             ),
           ),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF4F46E5),
-          ),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4F46E5)),
           useMaterial3: true,
         ),
-        initialRoute: '/',
+        initialRoute: '/welcome',
         onGenerateRoute: (settings) {
           if (settings.name == '/mfa-verify') {
             final args = settings.arguments as Map<String, dynamic>;
