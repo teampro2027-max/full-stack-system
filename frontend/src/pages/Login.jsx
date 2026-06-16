@@ -63,7 +63,7 @@ const Login = () => {
               <label className="label">Email Address</label>
               <div className="relative">
                 <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@admin.com" className="input pl-9" />
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email Address" className="input pl-9" />
               </div>
             </div>
             <div>
