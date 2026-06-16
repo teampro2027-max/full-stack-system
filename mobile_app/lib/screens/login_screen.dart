@@ -18,22 +18,11 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      final res = await Provider.of<AuthProvider>(
+      await Provider.of<AuthProvider>(
         context,
         listen: false,
       ).login(_emailController.text, _passwordController.text);
       if (!mounted) return;
-
-      if (res is Map && res['requiresMfa'] == true) {
-        Navigator.of(context).pushNamed(
-          '/mfa-verify',
-          arguments: {
-            'email': _emailController.text,
-            'password': _passwordController.text,
-          },
-        );
-        return;
-      }
 
       Navigator.of(context).pushReplacementNamed('/dashboard');
     } catch (e) {

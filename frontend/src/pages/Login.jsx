@@ -88,19 +88,11 @@ const Login = () => {
               {loading ? 'Signing in...' : 'Sign In to Admin Panel'}
             </button>
           </form>
-          <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-            <p className="text-xs text-slate-400 text-center font-medium mb-1">Demo Credentials</p>
-            <p className="text-xs text-center text-slate-500">
-              <span className="font-mono bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">admin@admin.com</span>
-              {' / '}
-              <span className="font-mono bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">admin123</span>
-            </p>
-          </div>
         </div>
 
         <div className="flex justify-center mt-4">
           <button onClick={toggleTheme} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-            {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+            {theme === 'dark' ? ' Light Mode' : ' Dark Mode'}
           </button>
         </div>
       </div>

@@ -56,6 +56,15 @@ const UserManagement = () => {
   };
 
   const handleSave = async () => {
+    if (!form.name || !/^[a-zA-Z\s]+$/.test(form.name.trim())) {
+      alert('Name must contain only letters and spaces');
+      return;
+    }
+    const cleanPhone = form.phone.replace(/\s+/g, '');
+    if (form.phone && !/^\+?\d+$/.test(cleanPhone)) {
+      alert('Phone number must contain only numbers');
+      return;
+    }
     setSaving(true);
     try {
       if (editUser) {

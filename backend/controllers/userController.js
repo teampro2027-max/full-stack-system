@@ -43,8 +43,19 @@ const updateUserProfile = async (req, res) => {
         const user = await User.findById(req.user._id);
 
         if (user) {
-            user.name = req.body.name || user.name;
-            user.phone = req.body.phone || user.phone;
+            if (req.body.name) {
+                if (!/^[a-zA-Z\s]+$/.test(req.body.name.trim())) {
+                    return res.status(400).json({ message: 'Name can only contain letters and spaces' });
+                }
+                user.name = req.body.name.trim();
+            }
+            if (req.body.phone) {
+                const cleanPhone = req.body.phone.replace(/\D/g, '');
+                if (!/^\d+$/.test(cleanPhone)) {
+                    return res.status(400).json({ message: 'Phone must contain only numbers' });
+                }
+                user.phone = cleanPhone;
+            }
             user.profilePicture = req.body.profilePicture || user.profilePicture;
 
             if (req.body.password) {

@@ -44,6 +44,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    if (!RegExp(r'^\+?\d+$').hasMatch(receiverPhone.replaceFirst('+', ''))) {
+      _showResultDialog(
+        false,
+        lang.t('paymentFailed'),
+        'Phone number must contain only numbers',
+      );
+      return;
+    }
+
     final double amount = double.tryParse(amountStr) ?? 0.0;
     if (amount <= 0.01) {
       // Minimum amount check

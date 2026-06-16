@@ -55,24 +55,6 @@ class ProfileScreen extends StatelessWidget {
 
             // Security Settings
             _section('Security', [
-              _tile(icon: Icons.security, title: lang.t('mfa'), subtitle: 'Two-factor authentication',
-                trailing: Switch(
-                  value: auth.user?['mfaEnabled'] ?? false,
-                  onChanged: (v) async {
-                    if (v) {
-                      final success = await Navigator.pushNamed(context, '/mfa-setup');
-                      if (success == true) auth.checkAuth(); // Refresh user data
-                    } else {
-                      try {
-                        await ApiService.post('/auth/mfa/disable', {});
-                        auth.checkAuth();
-                      } catch (e) {
-                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                      }
-                    }
-                  },
-                  activeColor: const Color(0xFF4F46E5),
-                )),
               _tile(icon: Icons.lock_outline, title: 'AES-256 Encryption', subtitle: 'Your data is end-to-end encrypted',
                 trailing: const Icon(Icons.check_circle, color: Colors.green)),
             ]),

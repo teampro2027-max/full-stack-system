@@ -16,9 +16,7 @@ import PaymentConfirmations from './pages/PaymentConfirmations';
 import ReminderManagement from './pages/ReminderManagement';
 import ReportsAnalytics from './pages/ReportsAnalytics';
 import ExpenseTracking from './pages/ExpenseTracking';
-import Security from './pages/Security';
 import SystemSettings from './pages/SystemSettings';
-import RolesPermissions from './pages/RolesPermissions';
 import EVCPlus from './pages/EVCPlus';
 import LanguageSettings from './pages/LanguageSettings';
 
@@ -44,11 +42,9 @@ function AppInner() {
             <Route path="reminders" element={<ReminderManagement />} />
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="expenses" element={<ExpenseTracking />} />
-            <Route path="security" element={<Security />} />
             <Route path="language" element={<LanguageSettings />} />
             <Route path="settings" element={<SystemSettings />} />
             <Route path="evc-plus" element={<EVCPlus />} />
-            <Route path="roles" element={<RolesPermissions />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

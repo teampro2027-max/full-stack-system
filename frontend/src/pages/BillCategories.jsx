@@ -48,6 +48,10 @@ const BillCategories = () => {
 
   const handleSave = async () => {
     if (!form.name) return;
+    if (!/^[a-zA-Z\s]+$/.test(form.name.trim())) {
+      alert('Category Name must contain only letters and spaces');
+      return;
+    }
     setSaving(true);
     try {
       if (editId) {

@@ -10,10 +10,8 @@ import 'providers/notification_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/register_screen.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/mfa_setup_screen.dart';
-import 'screens/mfa_verify_screen.dart';
+import 'screens/register_screen.dart';
 import 'screens/reports_screen.dart';
 
 void main() async {
@@ -90,26 +88,14 @@ class MultiBillApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4F46E5)),
           useMaterial3: true,
         ),
+
         initialRoute: '/welcome',
-        onGenerateRoute: (settings) {
-          if (settings.name == '/mfa-verify') {
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (context) => MfaVerifyScreen(
-                email: args['email'],
-                password: args['password'],
-              ),
-            );
-          }
-          return null;
-        },
         routes: {
           '/': (context) => const SplashScreen(),
           '/welcome': (context) => const WelcomeScreen(),
           '/login': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
           '/dashboard': (context) => const DashboardScreen(),
-          '/mfa-setup': (context) => const MfaSetupScreen(),
           '/reports': (context) => const ReportsScreen(),
         },
       ),

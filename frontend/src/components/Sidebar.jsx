@@ -21,55 +21,23 @@ const Sidebar = () => {
     );
   };
 
-  const navGroups = [
+  const navItems = [
+    { label: t('dashboard'), icon: LayoutDashboard, path: '/' },
+    { label: t('userManagement'), icon: Users, path: '/users' },
+    { label: t('billCategories'), icon: Tag, path: '/categories' },
+    { label: t('billsManagement'), icon: FileText, path: '/bills' },
     {
-      group: 'Main',
-      items: [
-        { label: t('dashboard'), icon: LayoutDashboard, path: '/' },
-        { label: t('userManagement'), icon: Users, path: '/users' },
+      label: t('payments'), icon: CreditCard, children: [
+        { label: t('payments'), path: '/payments' },
+        { label: t('paymentConfirmations'), path: '/payment-confirmations' },
       ],
     },
-    {
-      group: 'Bills',
-      items: [
-        { label: t('billCategories'), icon: Tag, path: '/categories' },
-        { label: t('billsManagement'), icon: FileText, path: '/bills' },
-        {
-          label: t('payments'), icon: CreditCard, children: [
-            { label: t('payments'), path: '/payments' },
-            { label: t('paymentConfirmations'), path: '/payment-confirmations' },
-          ],
-        },
-      ],
-    },
-    {
-      group: 'Communication',
-      items: [
-        { label: t('reminderManagement'), icon: Bell, path: '/reminders' },
-      ],
-    },
-    {
-      group: 'Analytics',
-      items: [
-        { label: t('reportsAnalytics'), icon: BarChart3, path: '/reports' },
-        { label: t('expenseTracking'), icon: TrendingUp, path: '/expenses' },
-      ],
-    },
-    {
-      group: 'System',
-      items: [
-        { label: t('securityMfa'), icon: Shield, path: '/security' },
-        { label: t('rolesPermissions'), icon: Lock, path: '/roles' },
-      ],
-    },
-    {
-      group: 'Config',
-      items: [
-        { label: t('languageSettings'), icon: Globe, path: '/language' },
-        { label: t('systemSettings'), icon: Settings, path: '/settings' },
-        { label: t('evcPlusIntegration'), icon: Zap, path: '/evc-plus' },
-      ],
-    },
+    { label: t('reminderManagement'), icon: Bell, path: '/reminders' },
+    { label: t('reportsAnalytics'), icon: BarChart3, path: '/reports' },
+    { label: t('expenseTracking'), icon: TrendingUp, path: '/expenses' },
+    { label: t('languageSettings'), icon: Globe, path: '/language' },
+    { label: t('systemSettings'), icon: Settings, path: '/settings' },
+    { label: t('evcPlusIntegration'), icon: Zap, path: '/evc-plus' },
   ];
 
   const isExpanded = (label) => expandedGroups.includes(label);
@@ -105,49 +73,40 @@ const Sidebar = () => {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
-          {navGroups.map(({ group, items }) => (
-            <div key={group}>
-              {!sidebarCollapsed && (
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">{group}</p>
-              )}
-              <div className="space-y-0.5">
-                {items.map((item) =>
-                  item.children ? (
-                    <div key={item.label}>
-                      <button
-                        onClick={() => toggleGroup(item.label)}
-                        className={`sidebar-link w-full ${isExpanded(item.label) ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
-                        title={sidebarCollapsed ? item.label : undefined}
-                      >
-                        <item.icon size={18} className="flex-shrink-0" />
-                        {!sidebarCollapsed && (
-                          <>
-                            <span className="flex-1 text-left">{item.label}</span>
-                            <ChevronDown size={14} className={`transition-transform ${isExpanded(item.label) ? 'rotate-180' : ''}`} />
-                          </>
-                        )}
-                      </button>
-                      {isExpanded(item.label) && !sidebarCollapsed && (
-                        <div className="ml-6 mt-1 space-y-0.5 border-l border-slate-200 dark:border-slate-700 pl-3">
-                          {item.children.map((child) => (
-                            <NavLink key={child.path} to={child.path} className={({ isActive }) => `block px-2 py-1.5 text-sm rounded-lg transition-colors ${isActive ? 'text-indigo-600 font-medium' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}>
-                              {child.label}
-                            </NavLink>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <NavLink key={item.path} to={item.path} title={sidebarCollapsed ? item.label : undefined} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                      <item.icon size={18} className="flex-shrink-0" />
-                      {!sidebarCollapsed && <span>{item.label}</span>}
-                    </NavLink>
-                  )
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
+          {navItems.map((item) =>
+            item.children ? (
+              <div key={item.label}>
+                <button
+                  onClick={() => toggleGroup(item.label)}
+                  className={`sidebar-link w-full ${isExpanded(item.label) ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  <item.icon size={18} className="flex-shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1 text-left">{item.label}</span>
+                      <ChevronDown size={14} className={`transition-transform ${isExpanded(item.label) ? 'rotate-180' : ''}`} />
+                    </>
+                  )}
+                </button>
+                {isExpanded(item.label) && !sidebarCollapsed && (
+                  <div className="ml-6 mt-1 space-y-0.5 border-l border-slate-200 dark:border-slate-700 pl-3">
+                    {item.children.map((child) => (
+                      <NavLink key={child.path} to={child.path} className={({ isActive }) => `block px-2 py-1.5 text-sm rounded-lg transition-colors ${isActive ? 'text-indigo-600 font-medium' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}>
+                        {child.label}
+                      </NavLink>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            ) : (
+              <NavLink key={item.path} to={item.path} title={sidebarCollapsed ? item.label : undefined} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                <item.icon size={18} className="flex-shrink-0" />
+                {!sidebarCollapsed && <span>{item.label}</span>}
+              </NavLink>
+            )
+          )}
         </nav>
 
         {/* Logout */}

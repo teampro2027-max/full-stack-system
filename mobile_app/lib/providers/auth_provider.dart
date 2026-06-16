@@ -34,11 +34,6 @@ class AuthProvider with ChangeNotifier {
 
       final data = json.decode(response.body);
       if (response.statusCode == 200) {
-        if (data['requiresMfa'] == true) {
-          _isLoading = false;
-          notifyListeners();
-          return data; // Return to UI for MFA code entry
-        }
         _token = data['token'];
         _user = data;
         if (_token != null) {
@@ -61,40 +56,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loginWithMfa(String email, String password, String token) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'password': password,
-          'mfaToken': token,
-        }),
-      );
-      final data = json.decode(response.body);
-      if (response.statusCode == 200) {
-        _token = data['token'];
-        _user = data;
-        await _storage.write(key: 'jwt', value: _token!);
-        await _storage.write(key: 'user', value: json.encode(data));
-        // Update FCM token on server after MFA login
-        NotificationService.updateTokenOnServer();
-        notifyListeners();
-      } else {
-        throw Exception(data['message'] ?? 'MFA Verification failed');
-      }
-    } catch (e) {
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> register(
+  Future<Map<String, dynamic>?> register(
     String name,
     String email,
     String password,
@@ -116,18 +78,59 @@ class AuthProvider with ChangeNotifier {
       );
 
       final data = json.decode(response.body);
-      if (response.statusCode == 201) {
+      _isLoading = false;
+      notifyListeners();
+
+      if (response.statusCode == 200) {
+        // OTP verification required
+        return data; // returns {'requiresOtp': true, 'email': email}
+      } else if (response.statusCode == 201) {
+        // Direct registration (fallback)
         _token = data['token'];
         _user = data;
         if (_token != null) {
           await _storage.write(key: 'jwt', value: _token!);
           await _storage.write(key: 'user', value: json.encode(data));
-          // Update FCM token on server after registration
+          NotificationService.updateTokenOnServer();
+        }
+        notifyListeners();
+        return null;
+      } else {
+        throw Exception(data['message'] ?? 'Registration failed');
+      }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> verifyRegisterOtp(String email, String otp) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/verify-register-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        _token = data['token'];
+        _user = data;
+        if (_token != null) {
+          await _storage.write(key: 'jwt', value: _token!);
+          await _storage.write(key: 'user', value: json.encode(data));
           NotificationService.updateTokenOnServer();
         }
         notifyListeners();
       } else {
-        throw Exception(data['message'] ?? 'Registration failed');
+        throw Exception(data['message'] ?? 'Verification failed');
       }
     } catch (e) {
       _isLoading = false;

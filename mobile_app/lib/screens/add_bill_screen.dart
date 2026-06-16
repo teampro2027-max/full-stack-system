@@ -194,7 +194,13 @@ class _AddBillScreenState extends State<AddBillScreen> {
               TextFormField(
                 controller: _titleController,
                 decoration: _inputDec('e.g. Electricity Bill October'),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(v.trim())) {
+                    return 'Title can only contain letters and spaces';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -257,7 +263,14 @@ class _AddBillScreenState extends State<AddBillScreen> {
                     controller: _amountController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: _inputDec('\$ 0.00'),
-                    validator: (v) => (v!.isEmpty || double.tryParse(v) == null) ? 'Enter valid amount' : null,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Required';
+                      final val = double.tryParse(v);
+                      if (val == null || val <= 0) {
+                        return 'Enter a valid positive number';
+                      }
+                      return null;
+                    },
                   ),
                 ])),
                 const SizedBox(width: 16),

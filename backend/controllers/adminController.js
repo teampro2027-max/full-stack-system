@@ -128,10 +128,16 @@ const adminGetUsers = async (req, res) => {
 const adminCreateUser = async (req, res) => {
     try {
         const { name, email, phone, password, role = 'user', status = 'active' } = req.body;
+        if (!name || !/^[a-zA-Z\s]+$/.test(name.trim())) {
+            return res.status(400).json({ message: 'Name can only contain letters and spaces' });
+        }
+        if (phone && !/^\+?\d+$/.test(phone.replace(/\s+/g, ''))) {
+            return res.status(400).json({ message: 'Phone must contain only numbers' });
+        }
         const exists = await User.findOne({ email });
         if (exists) return res.status(400).json({ message: 'Email already exists' });
         const hashed = await bcrypt.hash(password || 'Welcome@123', 10);
-        const user = await User.create({ name, email, phone, password: hashed, role, status });
+        const user = await User.create({ name: name.trim(), email, phone, password: hashed, role, status });
         res.status(201).json({ _id: user._id, name, email, phone, role, status });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -143,8 +149,18 @@ const adminUpdateUser = async (req, res) => {
         const { name, phone, status, role, mfaEnabled } = req.body;
         const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
-        if (name) user.name = name;
-        if (phone) user.phone = phone;
+        if (name) {
+            if (!/^[a-zA-Z\s]+$/.test(name.trim())) {
+                return res.status(400).json({ message: 'Name can only contain letters and spaces' });
+            }
+            user.name = name.trim();
+        }
+        if (phone) {
+            if (!/^\+?\d+$/.test(phone.replace(/\s+/g, ''))) {
+                return res.status(400).json({ message: 'Phone must contain only numbers' });
+            }
+            user.phone = phone;
+        }
         if (status) user.status = status;
         if (role) user.role = role;
         if (mfaEnabled !== undefined) user.mfaEnabled = mfaEnabled;
@@ -196,6 +212,13 @@ const adminGetBills = async (req, res) => {
 
 const adminCreateBill = async (req, res) => {
     try {
+        const { title, amount } = req.body;
+        if (!title || !/^[a-zA-Z\s]+$/.test(title.trim())) {
+            return res.status(400).json({ message: 'Title must contain only letters and spaces' });
+        }
+        if (amount === undefined || isNaN(amount) || Number(amount) <= 0) {
+            return res.status(400).json({ message: 'Amount must be a valid number greater than 0' });
+        }
         const bill = await Bill.create(req.body);
         res.status(201).json(bill);
     } catch (error) {
@@ -205,6 +228,17 @@ const adminCreateBill = async (req, res) => {
 
 const adminUpdateBill = async (req, res) => {
     try {
+        const { title, amount } = req.body;
+        if (title) {
+            if (!/^[a-zA-Z\s]+$/.test(title.trim())) {
+                return res.status(400).json({ message: 'Title must contain only letters and spaces' });
+            }
+        }
+        if (amount !== undefined) {
+            if (isNaN(amount) || Number(amount) <= 0) {
+                return res.status(400).json({ message: 'Amount must be a valid number greater than 0' });
+            }
+        }
         const bill = await Bill.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!bill) return res.status(404).json({ message: 'Bill not found' });
         res.json(bill);

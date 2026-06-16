@@ -44,6 +44,14 @@ const BillsManagement = () => {
   };
 
   const handleSave = async () => {
+    if (!form.title || !/^[a-zA-Z\s]+$/.test(form.title.trim())) {
+      alert('Title must contain only letters and spaces');
+      return;
+    }
+    if (form.amount === '' || isNaN(form.amount) || Number(form.amount) <= 0) {
+      alert('Amount must be a valid number greater than 0');
+      return;
+    }
     setSaving(true);
     try {
       if (editBill) await updateAdminBill(editBill._id, form);
