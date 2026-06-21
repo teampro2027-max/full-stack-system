@@ -56,6 +56,7 @@ const registerUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        let savedUser;
         if (emailUser) {
             // Re-use the existing inactive user record
             emailUser.name = name.trim();
@@ -63,10 +64,10 @@ const registerUser = async (req, res) => {
             emailUser.password = hashedPassword;
             emailUser.otp = otp;
             emailUser.otpExpiry = otpExpiry;
-            await emailUser.save();
+            savedUser = await emailUser.save();
         } else {
             // Create a new inactive user
-            await User.create({
+            savedUser = await User.create({
                 name: name.trim(),
                 email: normalizedEmail,
                 phone: normalizedPhone,
@@ -81,7 +82,18 @@ const registerUser = async (req, res) => {
         // Send OTP to Gmail
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(500).json({ message: 'Failed to send OTP verification email' });
+            console.warn(`\n==================================================`);
+            console.warn(`⚠️ SMTP failed to send OTP email to ${normalizedEmail}.`);
+            console.warn(`🔑 Generated verification OTP is: ${otp}`);
+            console.warn(`==================================================\n`);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Failed to send OTP verification email, but OTP was generated.',
+                requiresOtp: true,
+                email: normalizedEmail,
+                debugOtp: otp
+            });
         }
 
         res.status(200).json({

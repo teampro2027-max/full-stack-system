@@ -124,6 +124,21 @@ class _RegisterScreenState extends State<RegisterScreen>
       // Haddii backend-ku uu email-ka diray, wuxuu soo celinayaa requiresOtp: true
       // Haddii kale, check-ga backend-ka logs-kiisa fiiri
       if (res != null && res['requiresOtp'] == true) {
+        if (res['debugOtp'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Debug OTP: ${res['debugOtp']} (Copy and enter below)'),
+              backgroundColor: const Color(0xFF4F46E5),
+              duration: const Duration(seconds: 15),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'Dismiss',
+                textColor: Colors.white,
+                onPressed: () {},
+              ),
+            ),
+          );
+        }
         _showOtpDialog(email);
       } else {
         Navigator.of(context).pushReplacementNamed('/dashboard');
