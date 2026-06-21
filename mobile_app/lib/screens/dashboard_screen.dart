@@ -234,6 +234,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: () {
+                Provider.of<BillProvider>(context, listen: false).fetchBills();
+                Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+              },
+            ),
             Consumer<NotificationProvider>(
               builder: (ctx, np, _) => Stack(
                 children: [

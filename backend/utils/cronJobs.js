@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const Bill = require('../models/Bill');
 const Notification = require('../models/Notification');
 const { sendPushNotification } = require('../controllers/notificationController');
+const { sendBillReminderEmail } = require('./emailService');
 
 // Run everyday at 8:00 AM
 const setupCronJobs = () => {
@@ -48,35 +49,48 @@ const setupCronJobs = () => {
                 await sendPushNotification(bill.userId, 'Biil Wakhtigii dhaafay', msg);
             }
 
-            console.log('Finished daily cron jobs successfully.');
-        } catch (error) {
-            console.error('Error running cron jobs:', error.message);
-        }
-    });
+            // 3. Check for paid bills that have reached their 30-day cycle
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            thirtyDaysAgo.setHours(23, 59, 59, 999); // Safe boundary for end of day
 
-    // 3. Monthly Reset: Markay bishu dhalato (1st of every month at midnight)
-    cron.schedule('0 0 1 * *', async () => {
-        console.log('Running monthly bill status reset and notification');
-        try {
-            // Hel dhammaan biilashii horey loo bixiyey
-            const paidBills = await Bill.find({ status: 'paid' });
+            const recurringBillsToReset = await Bill.find({
+                status: 'paid',
+                lastPaidDate: { $lte: thirtyDaysAgo }
+            }).populate('userId', 'name email');
 
-            for (let bill of paidBills) {
+            for (let bill of recurringBillsToReset) {
+                // Reset back to unpaid
                 bill.status = 'unpaid';
+                // Set the new due date to today (or + X days if you want a grace period, e.g. + 5)
+                bill.dueDate = new Date(); 
+                // Unset lastPaidDate so it doesn't keep triggering until paid again
+                bill.lastPaidDate = null;
                 await bill.save();
 
-                const msg = `Bishii cusub ayaa dhalatay! Biilkaaga "${bill.title}" hadda waa furan yahay, waad bixin kartaa.`;
+                const userName = bill.userId?.name || 'Macaamiil';
+                const userEmail = bill.userId?.email;
+                const msg = `Waqtigii lacag bixinta biilkaaga "${bill.title}" waa la gaaray (30 maalmood ayaa dhammaatay). Fadlan bixi $${bill.amount}.`;
                 
+                // In-App Notification
                 await Notification.create({
-                    userId: bill.userId,
-                    title: 'Biil Cusub oo Furan',
+                    userId: bill.userId._id,
+                    title: 'Waqtigii Biilka Oo La Gaaray',
                     message: msg
                 });
 
-                await sendPushNotification(bill.userId, 'Biil Cusub oo Furan', msg);
+                // Push Notification
+                await sendPushNotification(bill.userId._id, 'Waqtigii Biilka Oo La Gaaray', msg);
+
+                // Email Reminder
+                if (userEmail) {
+                    await sendBillReminderEmail(userEmail, userName, bill.title, bill.amount);
+                }
             }
+
+            console.log('Finished daily cron jobs successfully.');
         } catch (error) {
-            console.error('Monthly reset error:', error.message);
+            console.error('Error running cron jobs:', error.message);
         }
     });
 };

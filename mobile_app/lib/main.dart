@@ -89,7 +89,7 @@ class MultiBillApp extends StatelessWidget {
           useMaterial3: true,
         ),
 
-        initialRoute: '/welcome',
+        initialRoute: '/',
         routes: {
           '/': (context) => const SplashScreen(),
           '/welcome': (context) => const WelcomeScreen(),

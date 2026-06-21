@@ -111,6 +111,7 @@ const processWaafiPayment = async (req, res) => {
         // Hadda biilka waxaa loo calaamadeynayaa 'paid' haddii lacag kasta ay guuleysato
         if (isSuccess) {
             bill.status = 'paid';
+            bill.lastPaidDate = new Date();
             await bill.save();
         }
 

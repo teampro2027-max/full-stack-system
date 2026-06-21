@@ -35,8 +35,8 @@ const registerUser = async (req, res) => {
         }
 
         const normalizedPhone = normalizePhoneNumber(phone);
-        if (!isValidWaafiPhoneNumber(normalizedPhone)) {
-            return res.status(400).json({ message: 'Phone number must be in WaafiPay format like 2526XXXXXXXX' });
+        if (!normalizedPhone || normalizedPhone.length < 7 || normalizedPhone.length > 15) {
+            return res.status(400).json({ message: 'Please provide a valid phone number' });
         }
 
         // Check if user already exists and is active in DB

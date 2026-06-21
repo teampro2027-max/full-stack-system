@@ -41,6 +41,39 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   String _normalizePhone(String value) => value.replaceAll(RegExp(r'\D'), '');
 
+  bool get _isNameValid {
+    final value = _nameController.text.trim();
+    if (value.isEmpty) return false;
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) return false;
+    if (value.length < 2) return false;
+    return true;
+  }
+
+  bool get _isGmailValid {
+    final prefix = _gmailPrefixController.text.trim();
+    if (prefix.isEmpty || prefix.length < 3) return false;
+    if (!RegExp(r'^[a-zA-Z]').hasMatch(prefix)) return false;
+    final fullEmail = '${prefix.toLowerCase()}@gmail.com';
+    if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@gmail\.com$').hasMatch(fullEmail)) return false;
+    return true;
+  }
+
+  bool get _isPhoneValid {
+    final normalized = _normalizePhone(_phoneController.text);
+    if (normalized.isEmpty) return false;
+    if (normalized.length < 7 || normalized.length > 10) return false;
+    return true;
+  }
+
+  bool get _isPasswordValid {
+    final value = _passwordController.text;
+    if (value.length < 6) return false;
+    if (!RegExp(r'[a-zA-Z]').hasMatch(value)) return false;
+    if (!RegExp(r'\d').hasMatch(value)) return false;
+    if (!RegExp(r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\x22,<>\.\?\/\\|`~]').hasMatch(value)) return false;
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +88,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     _nameController.addListener(() => setState(() {}));
     // Rebuild to update live email preview helper text
     _gmailPrefixController.addListener(() => setState(() {}));
+    _phoneController.addListener(() => setState(() {}));
+    _passwordController.addListener(() => setState(() {}));
   }
 
   @override
@@ -81,7 +116,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         _nameController.text.trim(),
         email,
         _passwordController.text,
-        _normalizePhone(_phoneController.text),
+        '252${_normalizePhone(_phoneController.text)}',
       );
 
       if (!mounted) return;
@@ -411,22 +446,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 RegExp(r'[a-zA-Z\s]'),
                               ),
                             ],
-                            decoration: _inputDecoration(
+                            decoration: _dynamicDecoration(
                               hint: 'e.g. Ahmed Ali',
                               icon: Icons.person_outline,
+                              isValid: _isNameValid,
+                              isEmpty: _nameController.text.isEmpty,
                             ),
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your full name';
-                              }
-                              if (!RegExp(
-                                r'^[a-zA-Z\s]+$',
-                              ).hasMatch(value.trim())) {
-                                return 'Name can only contain letters';
-                              }
-                              if (value.trim().length < 2) {
-                                return 'Name must be at least 2 characters';
-                              }
+                              if (value == null || value.trim().isEmpty) return 'Please enter your full name';
+                              if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) return 'Name can only contain letters';
+                              if (value.trim().length < 2) return 'Name must be at least 2 characters';
                               return null;
                             },
                           ),
@@ -444,18 +473,12 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 RegExp(r'[a-zA-Z0-9._+\-]'),
                               ),
                             ],
-                            decoration: InputDecoration(
-                              hintText: 'yourname',
-                              hintStyle: const TextStyle(
-                                color: Color(0xFFD1D5DB),
-                                fontSize: 14,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.email_outlined,
-                                color: Color(0xFF9CA3AF),
-                                size: 20,
-                              ),
-                              // Locked @gmail.com suffix
+                            decoration: _dynamicDecoration(
+                              hint: 'yourname',
+                              icon: Icons.email_outlined,
+                              isValid: _isGmailValid,
+                              isEmpty: _gmailPrefixController.text.isEmpty,
+                            ).copyWith(
                               suffix: const Text(
                                 '@gmail.com',
                                 style: TextStyle(
@@ -464,61 +487,14 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   fontSize: 14,
                                 ),
                               ),
-                              filled: true,
-                              fillColor: const Color(0xFFF9FAFB),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF4F46E5),
-                                  width: 2,
-                                ),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFEF4444),
-                                ),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFEF4444),
-                                  width: 2,
-                                ),
-                              ),
                             ),
                             validator: (value) {
                               final prefix = value?.trim() ?? '';
-                              if (prefix.isEmpty) {
-                                return 'Please enter your Gmail username';
-                              }
-                              if (prefix.length < 3) {
-                                return 'Gmail username must be at least 3 characters';
-                              }
-                              // Validate the full address as a proper email
-                              final fullEmail =
-                                  '${prefix.toLowerCase()}@gmail.com';
-                              if (!RegExp(
-                                r'^[a-zA-Z0-9._%+\-]+@gmail\.com$',
-                              ).hasMatch(fullEmail)) {
-                                return 'Enter a valid Gmail username';
-                              }
+                              if (prefix.isEmpty) return 'Please enter your Gmail username';
+                              if (!RegExp(r'^[a-zA-Z]').hasMatch(prefix)) return 'Must start with a letter';
+                              if (prefix.length < 3) return 'Gmail username must be at least 3 characters';
+                              final fullEmail = '${prefix.toLowerCase()}@gmail.com';
+                              if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@gmail\.com$').hasMatch(fullEmail)) return 'Enter a valid Gmail username';
                               return null;
                             },
                           ),
@@ -547,20 +523,24 @@ class _RegisterScreenState extends State<RegisterScreen>
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(15),
                             ],
-                            decoration: _inputDecoration(
-                              hint: '2526XXXXXXXX',
+                            decoration: _dynamicDecoration(
+                              hint: '61XXXXXXX',
                               icon: Icons.phone_outlined,
+                              isValid: _isPhoneValid,
+                              isEmpty: _phoneController.text.isEmpty,
+                              prefix: const Text(
+                                '+252 ',
+                                style: TextStyle(
+                                  color: Color(0xFF374151),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
                             ),
                             validator: (value) {
                               final normalized = _normalizePhone(value ?? '');
-                              if (normalized.isEmpty) {
-                                return 'Please enter your phone number';
-                              }
-                              if (!RegExp(
-                                r'^2526\d{8}$',
-                              ).hasMatch(normalized)) {
-                                return 'Use WaafiPay format: 2526XXXXXXXX';
-                              }
+                              if (normalized.isEmpty) return 'Please enter your phone number';
+                              if (normalized.length < 7 || normalized.length > 10) return 'Please enter 7-10 digits';
                               return null;
                             },
                           ),
@@ -572,17 +552,12 @@ class _RegisterScreenState extends State<RegisterScreen>
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              hintText: 'Min. 6 characters',
-                              hintStyle: const TextStyle(
-                                color: Color(0xFFD1D5DB),
-                                fontSize: 14,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.lock_outline,
-                                color: Color(0xFF9CA3AF),
-                                size: 20,
-                              ),
+                            decoration: _dynamicDecoration(
+                              hint: 'Min. 6 chars (letters, numbers, symbols)',
+                              icon: Icons.lock_outline,
+                              isValid: _isPasswordValid,
+                              isEmpty: _passwordController.text.isEmpty,
+                            ).copyWith(
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -595,49 +570,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   () => _obscurePassword = !_obscurePassword,
                                 ),
                               ),
-                              filled: true,
-                              fillColor: const Color(0xFFF9FAFB),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF4F46E5),
-                                  width: 2,
-                                ),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFEF4444),
-                                ),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFEF4444),
-                                  width: 2,
-                                ),
-                              ),
                             ),
                             validator: (value) {
-                              if (value == null || value.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
+                              if (value == null || value.isEmpty) return 'Password is required';
+                              if (value.length < 6) return 'At least 6 characters required';
+                              if (!RegExp(r'[a-zA-Z]').hasMatch(value)) return 'Must contain a letter';
+                              if (!RegExp(r'\d').hasMatch(value)) return 'Must contain a number';
+                              if (!RegExp(r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\x22,<>\.\?\/\\|`~]').hasMatch(value)) return 'Must contain a symbol';
                               return null;
                             },
                           ),
@@ -725,37 +664,30 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  InputDecoration _inputDecoration({
+  InputDecoration _dynamicDecoration({
     required String hint,
     required IconData icon,
+    required bool isValid,
+    required bool isEmpty,
+    Widget? prefixIcon,
+    Widget? prefix,
   }) {
+    Color borderColor = isEmpty ? const Color(0xFFE5E7EB) : (isValid ? Colors.green : Colors.red);
+    Color focusColor = isEmpty ? const Color(0xFF4F46E5) : (isValid ? Colors.green : Colors.red);
+    
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 14),
-      prefixIcon: Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
+      prefixIcon: prefixIcon ?? Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
+      prefix: prefix,
       filled: true,
       fillColor: const Color(0xFFF9FAFB),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFEF4444)),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: focusColor, width: 2)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 2)),
     );
   }
 }

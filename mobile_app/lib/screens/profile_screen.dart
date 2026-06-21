@@ -49,8 +49,8 @@ class ProfileScreen extends StatelessWidget {
 
             // Language Setting
             _section(lang.t('language'), [
-              _langTile(context, lang, 'en', 'ðŸ‡ºðŸ‡¸ English'),
-              _langTile(context, lang, 'so', 'ðŸ‡¸ðŸ‡´ Somali (Af Soomaali)'),
+              _langTile(context, lang, 'en', 'English'),
+              _langTile(context, lang, 'so', 'Somali'),
             ]),
 
             // Security Settings

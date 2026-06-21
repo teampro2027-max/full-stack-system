@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import * as LucideIcons from 'lucide-react';
+import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, AlertTriangle, Search } from 'lucide-react';
+
+const ALL_ICONS = Object.keys(LucideIcons).filter(key => /^[A-Z]/.test(key) && key !== 'LucideProps' && key !== 'Icon');
 import { useI18n } from '../context/I18nContext';
 import { getCategories, getDashboardStats, createCategory, updateCategory, deleteCategory } from '../services/api';
 
@@ -10,8 +13,9 @@ const BillCategories = () => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({ name: '', icon: '📋', color: 'bg-indigo-100 text-indigo-700' });
+  const [form, setForm] = useState({ name: '', icon: 'Zap', color: 'bg-indigo-100 text-indigo-700' });
   const [saving, setSaving] = useState(false);
+  const [iconSearch, setIconSearch] = useState('');
 
   const fetchCategories = async () => {
     setLoading(true); setError('');
@@ -60,7 +64,8 @@ const BillCategories = () => {
         await createCategory(form);
       }
       setShowModal(false);
-      setForm({ name: '', icon: '📋', color: 'bg-indigo-100 text-indigo-700' });
+      setForm({ name: '', icon: 'Zap', color: 'bg-indigo-100 text-indigo-700' });
+      setIconSearch('');
       setEditId(null);
       fetchCategories();
     } catch (e) {
@@ -82,6 +87,7 @@ const BillCategories = () => {
 
   const openEdit = (cat) => {
     setForm({ name: cat.name, icon: cat.icon, color: cat.color });
+    setIconSearch('');
     setEditId(cat._id);
     setShowModal(true);
   };
@@ -95,7 +101,7 @@ const BillCategories = () => {
         </div>
         <div className="flex gap-2">
           <button onClick={fetchCategories} className="btn-secondary"><RefreshCw size={15} className={loading ? 'animate-spin' : ''}/></button>
-          <button className="btn-primary" onClick={() => { setEditId(null); setForm({ name: '', icon: '📋', color: 'bg-indigo-100 text-indigo-700' }); setShowModal(true); }}><Plus size={15}/>Add Category</button>
+          <button className="btn-primary" onClick={() => { setEditId(null); setForm({ name: '', icon: 'Zap', color: 'bg-indigo-100 text-indigo-700' }); setIconSearch(''); setShowModal(true); }}><Plus size={15}/>Add Category</button>
         </div>
       </div>
 
@@ -108,7 +114,7 @@ const BillCategories = () => {
           <div key={cat._id} className={`card transition-all hover:shadow-md ${!cat.active ? 'opacity-60' : ''}`}>
             <div className="flex items-start justify-between mb-3">
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${cat.color || 'bg-slate-100 text-slate-700'}`}>
-                {cat.icon}
+                {LucideIcons[cat.icon] ? React.createElement(LucideIcons[cat.icon], { size: 24 }) : cat.icon}
               </div>
               <button onClick={() => toggleActive(cat)} className="text-slate-400 hover:text-indigo-600 transition-colors">
                 {cat.active ? <ToggleRight size={24} className="text-indigo-600"/> : <ToggleLeft size={24}/>}
@@ -135,7 +141,25 @@ const BillCategories = () => {
             <h2 className="text-lg font-bold mb-4">{editId ? 'Edit Category' : 'Add Category'}</h2>
             <div className="space-y-3">
               <div><label className="label">Category Name</label><input className="input" placeholder="e.g. Water Bill" value={form.name} onChange={e => setForm({...form, name: e.target.value})}/></div>
-              <div><label className="label">Icon (Emoji)</label><input className="input" placeholder="📋" value={form.icon} onChange={e => setForm({...form, icon: e.target.value})}/></div>
+              <div>
+                <label className="label">Icon</label>
+                <div className="relative mb-2">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input className="input pl-8 py-1.5 text-sm" placeholder="Search icons..." value={iconSearch} onChange={e => setIconSearch(e.target.value)} />
+                </div>
+                <div className="flex gap-2 flex-wrap max-h-32 overflow-y-auto p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800">
+                  {ALL_ICONS.filter(i => i.toLowerCase().includes(iconSearch.toLowerCase())).slice(0, 100).map(iconName => {
+                    const IconCmp = LucideIcons[iconName];
+                    if (!IconCmp) return null;
+                    return (
+                      <button key={iconName} type="button" onClick={() => setForm({...form, icon: iconName})} className={`p-2 rounded-lg transition-colors ${form.icon === iconName ? 'bg-indigo-600 text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'}`} title={iconName}>
+                        <IconCmp size={20} />
+                      </button>
+                    )
+                  })}
+                  {ALL_ICONS.filter(i => i.toLowerCase().includes(iconSearch.toLowerCase())).length === 0 && <span className="text-xs text-slate-400">No icons found</span>}
+                </div>
+              </div>
               <div><label className="label">Color Tailwind Classes</label><input className="input" placeholder="bg-blue-100 text-blue-700" value={form.color} onChange={e => setForm({...form, color: e.target.value})}/></div>
             </div>
             <div className="flex gap-2 mt-5">

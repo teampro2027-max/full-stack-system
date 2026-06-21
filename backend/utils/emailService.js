@@ -44,4 +44,49 @@ const sendOTP = async (email, otp) => {
   }
 };
 
-module.exports = { sendOTP };
+/**
+ * Wuxuu ogeysiin u dirayaa isticmaalaha in biilkii 30-ka maalmood uu dhamaaday
+ */
+const sendBillReminderEmail = async (email, userName, billTitle, amount) => {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.warn('SMTP credentials missing, skipping bill reminder email');
+      return false;
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: `"BillTrack Pro" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: `Xasuusin: Biilkaaga "${billTitle}" waa diyaar`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #4F46E5;">BillTrack Pro</h2>
+          <p>Haye <b>${userName}</b>,</p>
+          <p>Waxaannu ku xasuusinaynaa in 30-kii maalmood ee biilkaaga <b>"${billTitle}"</b> uu soo dhammaaday, haatanna la gaaray xilligii bixinta.</p>
+          <div style="font-size: 24px; font-weight: bold; padding: 20px; background: #f4f4f4; text-align: center; color: #111827; border-radius: 8px;">
+            Lacagta la rabo: $${amount}
+          </div>
+          <p style="margin-top: 20px;">Fadlan ka bixi biilkan app-ka gudihiisa.</p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 12px; color: #9CA3AF;">Waad ku mahadsan tahay isticmaalka BillTrack Pro.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error('Bill reminder email sending failed:', error);
+    return false;
+  }
+};
+
+module.exports = { sendOTP, sendBillReminderEmail };

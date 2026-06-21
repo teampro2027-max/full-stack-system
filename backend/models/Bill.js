@@ -58,6 +58,9 @@ const billSchema = new mongoose.Schema({
     documentUrl: {
         type: String
     },
+    lastPaidDate: {
+        type: Date
+    },
     language: {
         type: String,
         enum: ['en', 'so'],
