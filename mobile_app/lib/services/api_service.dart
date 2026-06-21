@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class ApiService {
-  static const String baseUrl = kIsWeb ? 'http://localhost:5000/api' : 'http://10.0.2.2:5000/api';
+  static const String baseUrl = 'https://full-stack-system-b6pw.onrender.com/api';
   static const _storage = FlutterSecureStorage();
 
   static Future<String?> _getToken() async {
