@@ -3,7 +3,7 @@ const OTP = require('../models/OTP');
 const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { sendOTP } = require('../utils/emailService');
 const {
     normalizePhoneNumber,
     isValidWaafiPhoneNumber
@@ -11,44 +11,6 @@ const {
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
-};
-
-// Create email transporter
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-
-const sendOtpEmail = async (email, otp) => {
-    console.log(`[OTP] Verification code for ${email} is: ${otp}`);
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        try {
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: email,
-                subject: 'BillTrack Pro - Verification Code',
-                html: `
-                    <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px;">
-                        <h2 style="color: #4F46E5;">Email Verification</h2>
-                        <p>Welcome to BillTrack Pro! Use the verification code below to complete your registration:</p>
-                        <div style="font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #4F46E5; padding: 10px; background-color: #f3f4f6; text-align: center; border-radius: 5px; margin: 20px 0;">
-                            ${otp}
-                        </div>
-                        <p>This code is valid for 10 minutes. If you did not request this, please ignore this email.</p>
-                    </div>
-                `
-            };
-            await transporter.sendMail(mailOptions);
-            console.log(`[OTP] Email sent successfully to ${email}`);
-        } catch (err) {
-            console.error('[OTP] Error sending email via SMTP:', err);
-        }
-    } else {
-        console.log('[OTP] SMTP credentials not set. OTP printed to console only.');
-    }
 };
 
 const registerUser = async (req, res) => {
@@ -77,43 +39,56 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Phone number must be in WaafiPay format like 2526XXXXXXXX' });
         }
 
-        // Check if user already exists in DB
+        // Check if user already exists and is active in DB
         const emailUser = await User.findOne({ email: normalizedEmail });
-        if (emailUser) {
+        if (emailUser && emailUser.status === 'active') {
             return res.status(400).json({ message: 'This Gmail is already registered. Please sign in instead.' });
         }
         const phoneUser = await User.findOne({ phone: normalizedPhone });
-        if (phoneUser) {
+        if (phoneUser && phoneUser.status === 'active') {
             return res.status(400).json({ message: 'This phone number is already registered.' });
         }
 
         // Generate 6-digit OTP code
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Store OTP details in temporary schema
-        await OTP.findOneAndUpdate(
-            { email: normalizedEmail },
-            {
+        if (emailUser) {
+            // Re-use the existing inactive user record
+            emailUser.name = name.trim();
+            emailUser.phone = normalizedPhone;
+            emailUser.password = hashedPassword;
+            emailUser.otp = otp;
+            emailUser.otpExpiry = otpExpiry;
+            await emailUser.save();
+        } else {
+            // Create a new inactive user
+            await User.create({
+                name: name.trim(),
+                email: normalizedEmail,
+                phone: normalizedPhone,
+                password: hashedPassword,
+                role: 'user',
+                status: 'inactive',
                 otp,
-                userData: {
-                    name: name.trim(),
-                    phone: normalizedPhone,
-                    password: hashedPassword
-                }
-            },
-            { upsert: true, new: true }
-        );
+                otpExpiry
+            });
+        }
 
         // Send OTP to Gmail
-        await sendOtpEmail(normalizedEmail, otp);
+        const emailSent = await sendOTP(normalizedEmail, otp);
+        if (!emailSent) {
+            return res.status(500).json({ message: 'Failed to send OTP verification email' });
+        }
 
         res.status(200).json({
+            success: true,
+            message: 'OTP sent to email',
             requiresOtp: true,
-            email: normalizedEmail,
-            message: 'Verification code sent to your Gmail'
+            email: normalizedEmail
         });
     } catch (error) {
         console.error(error);
@@ -129,46 +104,30 @@ const verifyRegisterOtp = async (req, res) => {
         }
 
         const normalizedEmail = email.trim().toLowerCase();
-        const otpRecord = await OTP.findOne({ email: normalizedEmail });
-        if (!otpRecord) {
-            return res.status(400).json({ message: 'Verification code expired or invalid. Please register again.' });
+        const user = await User.findOne({ email: normalizedEmail });
+        if (!user) {
+            return res.status(400).json({ message: 'User not found or registration expired.' });
         }
 
-        if (otpRecord.otp !== otp.trim()) {
-            return res.status(400).json({ message: 'Incorrect verification code. Please try again.' });
+        if (user.status === 'active') {
+            return res.status(400).json({ message: 'This account is already active. Please log in.' });
         }
 
-        const { name, phone, password } = otpRecord.userData;
-
-        // Final duplicate check before creating account
-        const emailUser = await User.findOne({ email: normalizedEmail });
-        if (emailUser) {
-            await OTP.deleteOne({ email: normalizedEmail });
-            return res.status(400).json({ message: 'This Gmail is already registered. Please sign in instead.' });
-        }
-        const phoneUser = await User.findOne({ phone });
-        if (phoneUser) {
-            return res.status(400).json({ message: 'This phone number is already registered.' });
+        if (user.otp !== otp.trim() || user.otpExpiry < new Date()) {
+            return res.status(400).json({ message: 'Incorrect or expired verification code. Please try again.' });
         }
 
-        // Create the actual user
-        const user = await User.create({
-            name,
-            email: normalizedEmail,
-            phone,
-            password,
-            role: 'user',
-            mfaEnabled: false
-        });
-
-        // Delete temporary OTP record
-        await OTP.deleteOne({ email: normalizedEmail });
+        // Activate the user
+        user.status = 'active';
+        user.otp = undefined;
+        user.otpExpiry = undefined;
+        await user.save();
 
         await AuditLog.create({
             userId: user._id,
             action: 'REGISTER',
             resource: 'User',
-            details: { email: normalizedEmail, phone }
+            details: { email: normalizedEmail, phone: user.phone }
         });
 
         res.status(201).json({
@@ -191,6 +150,10 @@ const loginUser = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        if (user.status !== 'active') {
+            return res.status(401).json({ message: 'Please verify your email registration first.' });
         }
 
         await AuditLog.create({ userId: user._id, action: 'LOGIN', resource: 'User', details: { email } });
