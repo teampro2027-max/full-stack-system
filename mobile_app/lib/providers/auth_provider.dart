@@ -8,7 +8,7 @@ import '../services/notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final _storage = const FlutterSecureStorage();
-  final String _baseUrl = 'https://full-stack-system-b6pw.onrender.com/api';
+  final String _baseUrl = 'https://full-stack-system-g7qo.onrender.com/api';
 
   String? _token;
   Map<String, dynamic>? _user;
