@@ -3,6 +3,7 @@ import * as LucideIcons from 'lucide-react';
 import { Plus, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, AlertTriangle, Search } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { getCategories, getDashboardStats, createCategory, updateCategory, deleteCategory } from '../services/api';
+import CustomDialog from '../components/CustomDialog';
 
 const ALL_ICONS = Object.keys(LucideIcons).filter(
   (key) => /^[A-Z]/.test(key) && key !== 'LucideProps' && key !== 'Icon'
@@ -35,6 +36,8 @@ const BillCategories = () => {
   const [form, setForm] = useState(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [dialogConfig, setDialogConfig] = useState(null);
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -62,23 +65,26 @@ const BillCategories = () => {
       setCategories((cats) =>
         cats.map((c) => (c._id === cat._id ? { ...c, active: !c.active } : c))
       );
+      setDialogConfig({ message: 'Category status updated successfully', type: 'success' });
     } catch {
-      alert('Failed to update status');
+      setDialogConfig({ message: 'Failed to update status', type: 'error' });
     }
   };
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
     if (!/^[a-zA-Z\s]+$/.test(form.name.trim())) {
-      alert('Category Name must contain only letters and spaces');
+      setDialogConfig({ message: 'Category Name must contain only letters and spaces', type: 'error' });
       return;
     }
     setSaving(true);
     try {
       if (editId) {
         await updateCategory(editId, form);
+        setDialogConfig({ message: 'Category updated successfully', type: 'success' });
       } else {
         await createCategory(form);
+        setDialogConfig({ message: 'Category created successfully', type: 'success' });
       }
       setShowModal(false);
       setForm(DEFAULT_FORM);
@@ -86,19 +92,23 @@ const BillCategories = () => {
       setEditId(null);
       fetchCategories();
     } catch (e) {
-      alert(e.response?.data?.message || 'Error saving category');
+      setDialogConfig({ message: e.response?.data?.message || 'Error saving category', type: 'error' });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) return;
+  const handleDeleteClick = (id) => {
+    setConfirmDeleteId(id);
+  };
+
+  const executeDelete = async (id) => {
     try {
       await deleteCategory(id);
       fetchCategories();
+      setDialogConfig({ message: 'Category deleted successfully', type: 'success' });
     } catch {
-      alert('Failed to delete category');
+      setDialogConfig({ message: 'Failed to delete category', type: 'error' });
     }
   };
 
@@ -198,7 +208,7 @@ const BillCategories = () => {
                     <Edit size={12} /> Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(cat._id)}
+                    onClick={() => handleDeleteClick(cat._id)}
                     className="btn-ghost flex-1 text-xs justify-center py-1.5 text-red-400"
                   >
                     <Trash2 size={12} /> Delete
@@ -318,6 +328,27 @@ const BillCategories = () => {
           </div>
         </div>
       )}
+      {/* Dialogs */}
+      <CustomDialog 
+        isOpen={!!dialogConfig}
+        type={dialogConfig?.type}
+        title={dialogConfig?.type === 'error' ? 'Error' : 'Success'}
+        message={dialogConfig?.message}
+        onCancel={() => setDialogConfig(null)}
+      />
+
+      <CustomDialog
+        isOpen={!!confirmDeleteId}
+        type="delete"
+        title="Confirm Delete"
+        message="Are you sure you want to delete this category? This action cannot be undone."
+        confirmText="Yes, Delete"
+        onConfirm={() => {
+          executeDelete(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 };

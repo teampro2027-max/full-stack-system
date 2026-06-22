@@ -13,7 +13,6 @@ const ReminderManagement = () => {
   const [upcomingBills, setUpcomingBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showModal, setShowModal] = useState(false);
 
   const fetchUpcoming = async () => {
     setLoading(true); setError('');
@@ -55,7 +54,6 @@ const ReminderManagement = () => {
         </div>
         <div className="flex gap-2">
           <button onClick={fetchUpcoming} className="btn-secondary"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /></button>
-          <button className="btn-primary" onClick={() => setShowModal(true)}><Plus size={15}/>New Template</button>
         </div>
       </div>
 

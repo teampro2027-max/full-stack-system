@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, Zap } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { getAdminPayments, confirmPayment, rejectPayment } from '../services/api';
+import CustomDialog from '../components/CustomDialog';
 
 const STATUS_COLORS = { success: 'badge-success', failed: 'badge-danger', pending: 'badge-warning' };
 const METHOD_ICON = { EVC: '⚡', WAAFI: '📱', STRIPE: '💳', CASH: '💵' };
@@ -14,6 +15,7 @@ const Payments = () => {
   const [error, setError] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
+  const [dialogConfig, setDialogConfig] = useState(null);
 
   const fetchPayments = useCallback(async () => {
     setLoading(true); setError('');
@@ -31,13 +33,21 @@ const Payments = () => {
 
   const handleConfirm = async (id) => {
     setActionLoading(id);
-    try { await confirmPayment(id); fetchPayments(); } catch { alert('Error confirming'); }
+    try { 
+      await confirmPayment(id); 
+      fetchPayments(); 
+      setDialogConfig({ type: 'success', message: 'Payment confirmed successfully' });
+    } catch { setDialogConfig({ type: 'error', message: 'Error confirming payment' }); }
     setActionLoading(null);
   };
 
   const handleReject = async (id) => {
     setActionLoading(id);
-    try { await rejectPayment(id); fetchPayments(); } catch { alert('Error rejecting'); }
+    try { 
+      await rejectPayment(id); 
+      fetchPayments(); 
+      setDialogConfig({ type: 'success', message: 'Payment rejected successfully' });
+    } catch { setDialogConfig({ type: 'error', message: 'Error rejecting payment' }); }
     setActionLoading(null);
   };
 
@@ -122,6 +132,14 @@ const Payments = () => {
           </table>
         </div>
       </div>
+
+      <CustomDialog 
+        isOpen={!!dialogConfig}
+        type={dialogConfig?.type}
+        title={dialogConfig?.type === 'error' ? 'Error' : 'Success'}
+        message={dialogConfig?.message}
+        onCancel={() => setDialogConfig(null)}
+      />
     </div>
   );
 };

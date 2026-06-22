@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Filter, RefreshCw, AlertTriangle, Edit, Trash2, MoreVertical, Download } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { getAdminBills, updateAdminBill, deleteAdminBill, createAdminBill, getCategories } from '../services/api';
+import CustomDialog from '../components/CustomDialog';
 
 const STATUS_COLORS = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
@@ -19,6 +20,8 @@ const BillsManagement = () => {
   const [saving, setSaving] = useState(false);
   const [dbCategories, setDbCategories] = useState([]);
   const [form, setForm] = useState({ userId: '', title: '', amount: '', category: '', status: 'unpaid', dueDate: '', isRecurring: false });
+  const [dialogConfig, setDialogConfig] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const fetchBills = useCallback(async () => {
     setLoading(true); setError('');
@@ -45,30 +48,46 @@ const BillsManagement = () => {
 
   const handleSave = async () => {
     if (!form.title || !/^[a-zA-Z\s]+$/.test(form.title.trim())) {
-      alert('Title must contain only letters and spaces');
+      setDialogConfig({ type: 'error', message: 'Title must contain only letters and spaces' });
       return;
     }
     if (form.amount === '' || isNaN(form.amount) || Number(form.amount) <= 0) {
-      alert('Amount must be a valid number greater than 0');
+      setDialogConfig({ type: 'error', message: 'Amount must be a valid number greater than 0' });
       return;
     }
     setSaving(true);
     try {
-      if (editBill) await updateAdminBill(editBill._id, form);
-      else await createAdminBill(form);
+      if (editBill) {
+        await updateAdminBill(editBill._id, form);
+        setDialogConfig({ type: 'success', message: 'Bill updated successfully' });
+      } else {
+        await createAdminBill(form);
+        setDialogConfig({ type: 'success', message: 'Bill created successfully' });
+      }
       setShowModal(false); fetchBills();
-    } catch (e) { alert(e.response?.data?.message || 'Error saving bill'); }
+    } catch (e) { setDialogConfig({ type: 'error', message: e.response?.data?.message || 'Error saving bill' }); }
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this bill?')) return;
-    try { await deleteAdminBill(id); fetchBills(); } catch { alert('Error deleting bill'); }
+  const handleDeleteClick = (id) => {
+    setConfirmDeleteId(id);
     setOpenMenu(null);
   };
 
+  const executeDelete = async (id) => {
+    try { 
+      await deleteAdminBill(id); 
+      fetchBills(); 
+      setDialogConfig({ type: 'success', message: 'Bill deleted successfully' });
+    } catch { setDialogConfig({ type: 'error', message: 'Error deleting bill' }); }
+  };
+
   const handleMarkPaid = async (bill) => {
-    try { await updateAdminBill(bill._id, { status: 'paid' }); fetchBills(); } catch { alert('Error'); }
+    try { 
+      await updateAdminBill(bill._id, { status: 'paid' }); 
+      fetchBills(); 
+      setDialogConfig({ type: 'success', message: 'Bill marked as paid' });
+    } catch { setDialogConfig({ type: 'error', message: 'Error marking bill as paid' }); }
     setOpenMenu(null);
   };
 
@@ -141,7 +160,7 @@ const BillsManagement = () => {
                         <div className="absolute right-0 mt-1 w-44 card shadow-xl z-10 p-1 animate-fade-in">
                           <button onClick={() => openEdit(b)} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"><Edit size={13}/>Edit</button>
                           {b.status !== 'paid' && <button onClick={() => handleMarkPaid(b)} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-emerald-600"><Download size={13}/>Mark Paid</button>}
-                          <button onClick={() => handleDelete(b._id)} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-red-500"><Trash2 size={13}/>Delete</button>
+                          <button onClick={() => handleDeleteClick(b._id)} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-red-500"><Trash2 size={13}/>Delete</button>
                         </div>
                       )}
                     </div>
@@ -187,6 +206,28 @@ const BillsManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Dialogs */}
+      <CustomDialog 
+        isOpen={!!dialogConfig}
+        type={dialogConfig?.type}
+        title={dialogConfig?.type === 'error' ? 'Error' : 'Success'}
+        message={dialogConfig?.message}
+        onCancel={() => setDialogConfig(null)}
+      />
+
+      <CustomDialog
+        isOpen={!!confirmDeleteId}
+        type="delete"
+        title="Confirm Delete"
+        message="Are you sure you want to delete this bill? This action cannot be undone."
+        confirmText="Yes, Delete"
+        onConfirm={() => {
+          executeDelete(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 };

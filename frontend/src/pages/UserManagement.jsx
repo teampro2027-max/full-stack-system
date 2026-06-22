@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser } from '../services/api';
+import CustomDialog from '../components/CustomDialog';
 
 const statusBadge = { active: 'badge-success', inactive: 'badge-warning', suspended: 'badge-danger' };
 const avatarColors = ['gradient-brand', 'gradient-success', 'gradient-warning', 'gradient-danger'];
@@ -22,6 +23,8 @@ const UserManagement = () => {
   const [editUser, setEditUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', status: 'active', role: 'user', password: '' });
+  const [dialogConfig, setDialogConfig] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -57,39 +60,45 @@ const UserManagement = () => {
 
   const handleSave = async () => {
     if (!form.name || !/^[a-zA-Z\s]+$/.test(form.name.trim())) {
-      alert('Name must contain only letters and spaces');
+      setDialogConfig({ type: 'error', message: 'Name must contain only letters and spaces' });
       return;
     }
     const cleanPhone = form.phone.replace(/\s+/g, '');
     if (form.phone && !/^\+?\d+$/.test(cleanPhone)) {
-      alert('Phone number must contain only numbers');
+      setDialogConfig({ type: 'error', message: 'Phone number must contain only numbers' });
       return;
     }
     setSaving(true);
     try {
       if (editUser) {
         await updateAdminUser(editUser._id, form);
+        setDialogConfig({ type: 'success', message: 'User updated successfully' });
       } else {
         await createAdminUser(form);
+        setDialogConfig({ type: 'success', message: 'User created successfully' });
       }
       setShowModal(false);
       fetchUsers();
     } catch (e) {
-      alert(e.response?.data?.message || 'Error saving user');
+      setDialogConfig({ type: 'error', message: e.response?.data?.message || 'Error saving user' });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this user?')) return;
+  const handleDeleteClick = (id) => {
+    setConfirmDeleteId(id);
+    setOpenMenu(null);
+  };
+
+  const executeDelete = async (id) => {
     try {
       await deleteAdminUser(id);
       fetchUsers();
+      setDialogConfig({ type: 'success', message: 'User deleted successfully' });
     } catch (e) {
-      alert('Error deleting user');
+      setDialogConfig({ type: 'error', message: 'Error deleting user' });
     }
-    setOpenMenu(null);
   };
 
   const handleToggleStatus = async (user) => {
@@ -97,8 +106,9 @@ const UserManagement = () => {
     try {
       await updateAdminUser(user._id, { status: newStatus });
       fetchUsers();
+      setDialogConfig({ type: 'success', message: `User status changed to ${newStatus}` });
     } catch (e) {
-      alert('Error updating status');
+      setDialogConfig({ type: 'error', message: 'Error updating status' });
     }
     setOpenMenu(null);
   };
@@ -207,7 +217,7 @@ const UserManagement = () => {
                             {[
                               { icon: Edit, label: t('editUser'), action: () => openEdit(u) },
                               { icon: u.status === 'active' ? UserX : UserCheck, label: u.status === 'active' ? 'Suspend' : 'Activate', action: () => handleToggleStatus(u), color: 'text-amber-600' },
-                              { icon: Trash2, label: t('deleteUser'), action: () => handleDelete(u._id), color: 'text-red-500' },
+                              { icon: Trash2, label: t('deleteUser'), action: () => handleDeleteClick(u._id), color: 'text-red-500' },
                             ].map(({ icon: Icon, label, action, color }) => (
                               <button key={label} onClick={action} className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${color || ''}`}>
                                 <Icon size={14} />{label}
@@ -267,6 +277,28 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Dialogs */}
+      <CustomDialog 
+        isOpen={!!dialogConfig}
+        type={dialogConfig?.type}
+        title={dialogConfig?.type === 'error' ? 'Error' : 'Success'}
+        message={dialogConfig?.message}
+        onCancel={() => setDialogConfig(null)}
+      />
+
+      <CustomDialog
+        isOpen={!!confirmDeleteId}
+        type="delete"
+        title="Confirm Delete"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Yes, Delete"
+        onConfirm={() => {
+          executeDelete(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Clock, Eye, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { getAdminPayments, confirmPayment, rejectPayment } from '../services/api';
+import CustomDialog from '../components/CustomDialog';
 
 const PaymentConfirmations = () => {
   const { t } = useI18n();
@@ -9,6 +10,7 @@ const PaymentConfirmations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
+  const [dialogConfig, setDialogConfig] = useState(null);
 
   const fetchPending = useCallback(async () => {
     setLoading(true); setError('');
@@ -27,7 +29,8 @@ const PaymentConfirmations = () => {
       if (action === 'confirm') await confirmPayment(id);
       else await rejectPayment(id);
       fetchPending();
-    } catch { alert('Error processing payment'); }
+      setDialogConfig({ type: 'success', message: `Payment ${action}ed successfully` });
+    } catch { setDialogConfig({ type: 'error', message: 'Error processing payment' }); }
     setActionLoading(null);
   };
 
@@ -110,6 +113,14 @@ const PaymentConfirmations = () => {
           }
         </div>
       )}
+
+      <CustomDialog 
+        isOpen={!!dialogConfig}
+        type={dialogConfig?.type}
+        title={dialogConfig?.type === 'error' ? 'Error' : 'Success'}
+        message={dialogConfig?.message}
+        onCancel={() => setDialogConfig(null)}
+      />
     </div>
   );
 };
