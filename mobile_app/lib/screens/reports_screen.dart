@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../utils/download_helper.dart';
+import '../utils/category_helpers.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({Key? key}) : super(key: key);
@@ -461,7 +462,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         .where((p) => p['billId'] != null && p['billId'] is Map && p['billId']['category'] == category)
         .toList();
     
-    final categoryLabel = category.replaceAll('_', ' ').toUpperCase();
+    final meta = getCategoryMeta(context, category, const {});
+    final iconColor = meta['color'] as Color? ?? Colors.indigo;
+    final categoryLabel = (meta['name'] as String? ?? category).replaceAll('_', ' ').toUpperCase();
 
     showModalBottomSheet(
       context: context,
@@ -484,8 +487,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.indigo.shade50, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.category, color: Colors.indigo),
+                    decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                    child: getCategoryIcon(
+                      meta['icon'] as String? ?? '📋',
+                      color: iconColor,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
@@ -563,6 +570,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return Column(
       children: byCategory.entries.map((e) {
+        final meta = getCategoryMeta(context, e.key, const {});
+        final iconColor = meta['color'] as Color? ?? Colors.indigo;
+        final categoryLabel = (meta['name'] as String? ?? e.key).replaceAll('_', ' ').toUpperCase();
+
         return InkWell(
           onTap: () => _showCategoryDetails(e.key),
           borderRadius: BorderRadius.circular(12),
@@ -578,11 +589,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.indigo.shade50, borderRadius: BorderRadius.circular(8)),
-                  child: const Icon(Icons.category, size: 18, color: Colors.indigo),
+                  decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: getCategoryIcon(
+                    meta['icon'] as String? ?? '📋',
+                    color: iconColor,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: Text(e.key.replaceAll('_', ' ').toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+                Expanded(child: Text(categoryLabel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
                 Text('\$${e.value}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF4F46E5))),
                 const SizedBox(width: 8),
                 const Icon(Icons.chevron_right, size: 16, color: Colors.grey),

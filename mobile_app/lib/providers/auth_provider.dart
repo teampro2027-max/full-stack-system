@@ -8,7 +8,9 @@ import '../services/notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final _storage = const FlutterSecureStorage();
-  final String _baseUrl = 'https://full-stack-system-g7qo.onrender.com/api';
+  final String _baseUrl = kDebugMode
+      ? (kIsWeb ? 'http://localhost:5000/api' : 'http://10.0.2.2:5000/api')
+      : 'https://full-stack-system-g7qo.onrender.com/api';
 
   String? _token;
   Map<String, dynamic>? _user;
@@ -138,6 +140,62 @@ class AuthProvider with ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email}),
+      );
+
+      final data = json.decode(response.body);
+      _isLoading = false;
+      notifyListeners();
+
+      if (response.statusCode == 200) {
+        return data; // contains success, message, email, debugOtp
+      } else {
+        throw Exception(data['message'] ?? 'Failed to request password reset');
+      }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> resetPassword(String email, String otp, String newPassword) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      _isLoading = false;
+      notifyListeners();
+
+      if (response.statusCode != 200) {
+        throw Exception(data['message'] ?? 'Failed to reset password');
+      }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> checkAuth() async {

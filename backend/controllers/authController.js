@@ -3,7 +3,7 @@ const OTP = require('../models/OTP');
 const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { sendOTP } = require('../utils/emailService');
+const { sendOTP, sendResetOTP } = require('../utils/emailService');
 const {
     normalizePhoneNumber,
     isValidWaafiPhoneNumber
@@ -84,15 +84,19 @@ const registerUser = async (req, res) => {
         if (!emailSent) {
             console.warn(`\n==================================================`);
             console.warn(`⚠️ SMTP failed to send OTP email to ${normalizedEmail}.`);
-            console.warn(`🔑 Generated verification OTP is: ${otp}`);
             console.warn(`==================================================\n`);
 
-            return res.status(200).json({
-                success: true,
-                message: 'Failed to send OTP verification email, but OTP was generated.',
-                requiresOtp: true,
-                email: normalizedEmail,
-                debugOtp: otp
+            // Revert database modifications
+            if (emailUser) {
+                emailUser.otp = undefined;
+                emailUser.otpExpiry = undefined;
+                await emailUser.save();
+            } else if (savedUser) {
+                await User.deleteOne({ _id: savedUser._id });
+            }
+
+            return res.status(400).json({
+                message: 'Failed to send OTP verification email. Please make sure the Gmail address exists and is valid.'
             });
         }
 
@@ -100,7 +104,8 @@ const registerUser = async (req, res) => {
             success: true,
             message: 'OTP sent to email',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            debugOtp: otp
         });
     } catch (error) {
         console.error(error);
@@ -183,5 +188,104 @@ const loginUser = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, verifyRegisterOtp, loginUser };
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+    try {
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: normalizedEmail });
+
+        if (!user || user.status !== 'active') {
+            return res.status(400).json({ message: 'User with this Gmail address does not exist or is inactive' });
+        }
+
+        // Generate 6-digit OTP code
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+        user.otp = otp;
+        user.otpExpiry = otpExpiry;
+        await user.save();
+
+        // Send OTP to Gmail
+        const emailSent = await sendResetOTP(normalizedEmail, otp);
+        if (!emailSent) {
+            // Revert OTP if failed to send
+            user.otp = undefined;
+            user.otpExpiry = undefined;
+            await user.save();
+
+            return res.status(400).json({
+                message: 'Failed to send verification OTP email. Please make sure the Gmail address exists and is valid.'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset OTP sent to email',
+            email: normalizedEmail,
+            debugOtp: otp
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+    try {
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({ message: 'Email, OTP, and new password are required' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: normalizedEmail });
+
+        if (!user) {
+            return res.status(400).json({ message: 'User not found' });
+        }
+
+        if (user.otp !== otp.trim() || user.otpExpiry < new Date()) {
+            return res.status(400).json({ message: 'Incorrect or expired verification code. Please try again.' });
+        }
+
+        // Validate password strength
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+        }
+        if (!/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword) || !/[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\x22,<>\.\?\/\\|`~]/.test(newPassword)) {
+            return res.status(400).json({ message: 'Password must contain letters, numbers, and symbols' });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        user.password = hashedPassword;
+        user.otp = undefined;
+        user.otpExpiry = undefined;
+        await user.save();
+
+        await AuditLog.create({
+            userId: user._id,
+            action: 'RESET_PASSWORD',
+            resource: 'User',
+            details: { email: normalizedEmail }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset successful. Please login with your new password.'
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { registerUser, verifyRegisterOtp, loginUser, forgotPassword, resetPassword };
 

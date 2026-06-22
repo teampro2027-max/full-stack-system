@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/bill_provider.dart';
 import '../providers/language_provider.dart';
+import '../utils/category_helpers.dart';
 
 class AddBillScreen extends StatefulWidget {
   final Map<String, dynamic>? existingBill;
@@ -40,6 +41,13 @@ class _AddBillScreenState extends State<AddBillScreen> {
         _dueDate = DateTime.tryParse(b['dueDate']) ?? _dueDate;
       }
     }
+    // Ensure categories are loaded (in case screen was opened without visiting dashboard)
+    Future.microtask(() {
+      final provider = Provider.of<BillProvider>(context, listen: false);
+      if (provider.categories.isEmpty) {
+        provider.fetchCategories();
+      }
+    });
   }
 
   @override
@@ -243,7 +251,11 @@ class _AddBillScreenState extends State<AddBillScreen> {
                               boxShadow: selected ? [BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4))] : [],
                             ),
                             child: Row(children: [
-                              Text(cat['icon'] ?? '📋', style: const TextStyle(fontSize: 16)),
+                              getCategoryIcon(
+                                cat['icon'] ?? '📋',
+                                color: selected ? Colors.white : const Color(0xFF4F46E5),
+                                size: 16,
+                              ),
                               const SizedBox(width: 6),
                               Text(cat['name'], style: TextStyle(color: selected ? Colors.white : Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w600)),
                             ]),

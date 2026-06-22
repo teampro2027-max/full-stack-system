@@ -16,10 +16,8 @@ const getBills = async (req, res) => {
 };
 
 const createBill = async (req, res) => {
-    const { title, amount, dueDate, category } = req.body;
+    const { title, amount, dueDate, category, isRecurring, recurringInterval, notes } = req.body;
     
-    // Admins could pass userId, but typical user creates for themselves
-    // Here we'll default to req.user._id if not provided, or let admin specify
     const targetUserId = (req.user.role === 'admin' && req.body.userId) ? req.body.userId : req.user._id;
 
     try {
@@ -28,26 +26,30 @@ const createBill = async (req, res) => {
             title,
             amount,
             dueDate,
-            category
+            category,
+            isRecurring: isRecurring || false,
+            recurringInterval: recurringInterval || 'monthly',
+            notes: notes || ''
         });
 
-        // Create notification for the user
-        const msg = `Biil cusub oo ${category} ah ("${title}") oo dhan $${amount} ayaa laguu soo saaray.`;
+        // Create in-app notification for the user
+        const msg = `Biil cusub oo "${title}" ah oo dhan $${amount} ayaa laguu soo saaray.`;
         await Notification.create({
             userId: targetUserId,
             title: 'Biil Cusub',
             message: msg
         });
 
-        // U dir Push Notification
-        await sendPushNotification(targetUserId, 'Biil Cusub', msg);
+        // Push Notification (non-blocking - won't fail the request if it fails)
+        sendPushNotification(targetUserId, 'Biil Cusub', msg).catch(() => {});
 
         res.status(201).json(bill);
     } catch (error) {
-        console.error('CREATE BILL ERROR:', error);
+        console.error('CREATE BILL ERROR:', error.message);
         res.status(500).json({ message: 'Server error: ' + error.message });
     }
 };
+
 
 const updateBill = async (req, res) => {
     try {

@@ -173,7 +173,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                      color: const Color(0xFF4F46E5).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -396,10 +396,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                           width: 90,
                           height: 90,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.25),
+                            color: Colors.white.withOpacity(0.25),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.6),
+                              color: Colors.white.withOpacity(0.6),
                               width: 3,
                             ),
                           ),

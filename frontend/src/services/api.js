@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 const api = axios.create({
-  baseURL: 'https://full-stack-system-g7qo.onrender.com/api',
+  baseURL: isLocal ? 'http://localhost:5000/api' : 'https://full-stack-system-g7qo.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
 });
 

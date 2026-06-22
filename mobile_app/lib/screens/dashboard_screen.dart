@@ -12,6 +12,7 @@ import 'notification_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
 import '../providers/notification_provider.dart';
+import '../utils/category_helpers.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -26,16 +27,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
 
   final Map<String, Map<String, dynamic>> _categoryMeta = {
-    'electricity': {'icon': 'âš¡', 'color': Color(0xFFF59E0B)},
-    'water': {'icon': 'ðŸ’§', 'color': Color(0xFF3B82F6)},
-    'internet': {'icon': 'ðŸŒ', 'color': Color(0xFF10B981)},
-    'rent': {'icon': 'ðŸ ', 'color': Color(0xFF8B5CF6)},
-    'school_fees': {'icon': 'ðŸŽ“', 'color': Color(0xFFEF4444)},
-    'mobile_postpaid': {'icon': 'ðŸ“±', 'color': Color(0xFFEC4899)},
-    'tv_subscription': {'icon': 'ðŸ“º', 'color': Color(0xFF6366F1)},
-    'waste_collection': {'icon': 'ðŸ—‘ï¸', 'color': Color(0xFF84CC16)},
-    'loan_installment': {'icon': 'ðŸ’°', 'color': Color(0xFFF97316)},
-    'government_license': {'icon': 'ðŸ“‹', 'color': Color(0xFF14B8A6)},
+    'electricity': {'icon': '⚡', 'color': Color(0xFFF59E0B)},
+    'water': {'icon': '💧', 'color': Color(0xFF3B82F6)},
+    'internet': {'icon': '🌐', 'color': Color(0xFF10B981)},
+    'rent': {'icon': '🏠', 'color': Color(0xFF8B5CF6)},
+    'school_fees': {'icon': '🎓', 'color': Color(0xFFEF4444)},
+    'mobile_postpaid': {'icon': '📱', 'color': Color(0xFFEC4899)},
+    'tv_subscription': {'icon': '📺', 'color': Color(0xFF6366F1)},
+    'waste_collection': {'icon': '🗑️', 'color': Color(0xFF84CC16)},
+    'loan_installment': {'icon': '💰', 'color': Color(0xFFF97316)},
+    'government_license': {'icon': '📋', 'color': Color(0xFF14B8A6)},
   };
 
   @override
@@ -346,9 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         SliverList(
           delegate: SliverChildBuilderDelegate((ctx, i) {
             final bill = upcoming[i];
-            final meta =
-                _categoryMeta[bill['category']] ??
-                {'icon': 'ðŸ“„', 'color': Colors.grey};
+            final meta = getCategoryMeta(context, bill['category'] ?? '', _categoryMeta);
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: _billCard(ctx, lang, bill, meta),
@@ -393,9 +392,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 itemCount: bills.bills.length,
                 itemBuilder: (ctx, i) {
                   final bill = bills.bills[i];
-                  final meta =
-                      _categoryMeta[bill['category']] ??
-                      {'icon': 'ðŸ“„', 'color': Colors.grey};
+                  final meta = getCategoryMeta(context, bill['category'] ?? '', _categoryMeta);
                   return Dismissible(
                     key: Key(bill['_id']),
                     direction: DismissDirection.endToStart,
@@ -615,6 +612,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 48,
@@ -624,9 +622,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Text(
-                meta['icon'] as String,
-                style: const TextStyle(fontSize: 22),
+              child: getCategoryIcon(
+                meta['icon'] as String? ?? '📋',
+                color: (meta['color'] as Color),
+                size: 24,
               ),
             ),
           ),
@@ -657,6 +656,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 '\$${bill['amount']}',
@@ -665,7 +665,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 5),
               if (bill['status'] != 'paid')
                 GestureDetector(
                   onTap: () async {
@@ -722,9 +722,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 5),
+              _editBillButton(context, bill),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _editBillButton(BuildContext context, dynamic bill) {
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AddBillScreen(
+              existingBill: Map<String, dynamic>.from(bill),
+            ),
+          ),
+        );
+        if (result == true) {
+          Provider.of<BillProvider>(context, listen: false).fetchBills();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.edit_outlined, size: 13, color: Colors.grey.shade600),
+            const SizedBox(width: 4),
+            Text(
+              'Edit',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

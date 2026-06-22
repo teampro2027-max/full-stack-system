@@ -33,6 +33,311 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordDialog() {
+    final emailResetController = TextEditingController();
+    final otpResetController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    bool hasSentOtp = false;
+    String sentToEmail = '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        bool processing = false;
+        bool obscureNewPass = true;
+        bool obscureConfirmPass = true;
+
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF5B21B6).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      hasSentOtp ? Icons.lock_reset : Icons.email_outlined,
+                      color: const Color(0xFF5B21B6),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    hasSentOtp ? 'Reset Password' : 'Forgot Password',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!hasSentOtp) ...[
+                      const Text(
+                        'Fadlan geli Gmail-kaaga si aan kuugu soo dirno koodka xaqiijinta ee OTP.',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: emailResetController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          hintText: 'yourname@gmail.com',
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          filled: true,
+                          fillColor: const Color(0xFFF9FAFB),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                          children: [
+                            const TextSpan(text: 'Koodhka OTP ayaa loo diray '),
+                            TextSpan(
+                              text: sentToEmail,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF5B21B6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'OTP Code',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: otpResetController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 4,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter 6-digit OTP',
+                          filled: true,
+                          fillColor: const Color(0xFFF9FAFB),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'New Password',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: newPasswordController,
+                        obscureText: obscureNewPass,
+                        decoration: InputDecoration(
+                          hintText: 'Enter new password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureNewPass ? Icons.visibility_off : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                obscureNewPass = !obscureNewPass;
+                              });
+                            },
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF9FAFB),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Confirm Password',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: confirmPasswordController,
+                        obscureText: obscureConfirmPass,
+                        decoration: InputDecoration(
+                          hintText: 'Confirm new password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirmPass ? Icons.visibility_off : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                obscureConfirmPass = !obscureConfirmPass;
+                              });
+                            },
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF9FAFB),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: processing ? null : () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel', style: TextStyle(color: Color(0xFF9CA3AF))),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5B21B6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: processing
+                      ? null
+                      : () async {
+                          if (!hasSentOtp) {
+                            final email = emailResetController.text.trim().toLowerCase();
+                            if (email.isEmpty || !email.endsWith('@gmail.com')) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Fadlan geli Gmail sax ah (@gmail.com)'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            setDialogState(() => processing = true);
+                            try {
+                              final res = await Provider.of<AuthProvider>(
+                                dialogContext,
+                                listen: false,
+                              ).forgotPassword(email);
+                              
+                              setDialogState(() {
+                                hasSentOtp = true;
+                                sentToEmail = email;
+                                processing = false;
+                              });
+
+                              if (res['debugOtp'] != null) {
+                                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Debug Reset OTP: ${res['debugOtp']} (Copy and enter below)'),
+                                    backgroundColor: const Color(0xFF5B21B6),
+                                    duration: const Duration(seconds: 15),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setDialogState(() => processing = false);
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString().replaceFirst('Exception: ', '')),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } else {
+                            final otp = otpResetController.text.trim();
+                            final newPass = newPasswordController.text;
+                            final confirmPass = confirmPasswordController.text;
+
+                            if (otp.length != 6) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Fadlan geli 6-digit OTP code'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            if (newPass.length < 6) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Password-ku waa inuu ka koobnaadaa ugu yaraan 6 xaraf'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            if (newPass != confirmPass) {
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Password-ka cusub iyo kan xaqiijinta isma laha'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            setDialogState(() => processing = true);
+                            try {
+                              await Provider.of<AuthProvider>(
+                                dialogContext,
+                                listen: false,
+                              ).resetPassword(sentToEmail, otp, newPass);
+
+                              Navigator.of(ctx).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Password-kaaga dib ayaa loo dejiyay si guul leh. Hadda soo gal.'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } catch (e) {
+                              setDialogState(() => processing = false);
+                              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString().replaceFirst('Exception: ', '')),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: processing
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(hasSentOtp ? 'Reset Password' : 'Send OTP'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoading = Provider.of<AuthProvider>(context).isLoading;
@@ -165,7 +470,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {},
+                            onPressed: _showForgotPasswordDialog,
                             style: TextButton.styleFrom(
                               foregroundColor: const Color(0xFF5B21B6),
                               textStyle: const TextStyle(

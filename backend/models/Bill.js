@@ -21,19 +21,8 @@ const billSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: [
-            'electricity',
-            'water',
-            'internet',
-            'rent',
-            'school_fees',
-            'mobile_postpaid',
-            'tv_subscription',
-            'waste_collection',
-            'loan_installment',
-            'government_license'
-        ],
-        required: true
+        required: true,
+        trim: true
     },
     status: {
         type: String,

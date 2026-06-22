@@ -25,24 +25,27 @@ class BillProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      // Fetch bills and categories separately to avoid type casting issues
       final billsResult = await ApiService.get('/bills');
       _bills = (billsResult is List) ? List<dynamic>.from(billsResult) : [];
     } catch (e) {
       _bills = [];
     }
-    // Fetch categories separately (no auth required)
+    await fetchCategories();
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchCategories() async {
     try {
       final catResult = await ApiService.get('/categories');
       final rawList = catResult is Map ? (catResult['categories'] ?? []) : [];
       _categories = (rawList as List<dynamic>)
           .where((c) => c['active'] == true)
           .toList();
+      notifyListeners();
     } catch (e) {
       _categories = [];
     }
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<void> addBill(Map<String, dynamic> data) async {
