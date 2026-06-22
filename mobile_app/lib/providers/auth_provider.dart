@@ -8,9 +8,7 @@ import '../services/notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final _storage = const FlutterSecureStorage();
-  final String _baseUrl = kDebugMode
-      ? (kIsWeb ? 'http://localhost:5000/api' : 'http://10.0.2.2:5000/api')
-      : 'https://full-stack-system-g7qo.onrender.com/api';
+  final String _baseUrl = 'https://full-stack-system-g7qo.onrender.com/api';
 
   String? _token;
   Map<String, dynamic>? _user;
