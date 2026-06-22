@@ -373,7 +373,8 @@ const forgotPassword = async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Password reset OTP sent to email',
-            email: normalizedEmail
+            email: normalizedEmail,
+            debugOtp: otp
         });
     } catch (error) {
         console.error(error);
