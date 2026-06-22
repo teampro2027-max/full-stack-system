@@ -47,23 +47,85 @@ app.get('/api/diag/email-test', async (req, res) => {
                 SMTP_PASSWORD_Exists: !!smtpPassword
             });
         }
-        const transporter = nodemailer.createTransport({
+
+        // Test 1: service: 'gmail'
+        const transporter1 = nodemailer.createTransport({
             service: 'gmail',
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 5000,
             auth: {
                 user: smtpEmail,
                 pass: smtpPassword,
             },
         });
-        await transporter.verify();
+
+        let verify1Success = false;
+        let verify1Error = null;
+        try {
+            await transporter1.verify();
+            verify1Success = true;
+        } catch (err) {
+            verify1Error = err.message;
+        }
+
+        // Test 2: port 465 (secure)
+        const transporter2 = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 5000,
+            auth: {
+                user: smtpEmail,
+                pass: smtpPassword,
+            },
+        });
+
+        let verify2Success = false;
+        let verify2Error = null;
+        try {
+            await transporter2.verify();
+            verify2Success = true;
+        } catch (err) {
+            verify2Error = err.message;
+        }
+
+        // Test 3: port 587 (TLS)
+        const transporter3 = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 5000,
+            auth: {
+                user: smtpEmail,
+                pass: smtpPassword,
+            },
+        });
+
+        let verify3Success = false;
+        let verify3Error = null;
+        try {
+            await transporter3.verify();
+            verify3Success = true;
+        } catch (err) {
+            verify3Error = err.message;
+        }
+
         return res.status(200).json({
-            success: true,
-            message: 'SMTP connection verified successfully',
-            SMTP_EMAIL: smtpEmail
+            success: verify1Success || verify2Success || verify3Success,
+            SMTP_EMAIL: smtpEmail,
+            test1_gmail_service: { success: verify1Success, error: verify1Error },
+            test2_port465: { success: verify2Success, error: verify2Error },
+            test3_port587: { success: verify3Success, error: verify3Error }
         });
     } catch (err) {
         return res.status(500).json({
             success: false,
-            message: 'SMTP verification failed',
+            message: 'Diagnostic script failed',
             error: err.message
         });
     }
