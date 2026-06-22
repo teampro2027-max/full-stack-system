@@ -3,11 +3,6 @@ import { Bell, Plus, Clock, Edit, Trash2, Send, RefreshCw, AlertTriangle } from 
 import { useI18n } from '../context/I18nContext';
 import { getDashboardStats } from '../services/api';
 
-const templates = [
-  { id: 1, name: 'Bill Due Soon', msg: 'Dear {name}, your {category} bill of ${amount} is due on {date}. Pay now via EVC Plus.', lang: 'EN' },
-  { id: 2, name: 'Bill Due Soon (Somali)', msg: 'Mahadsanid {name}, biishaada {category} ee ${amount} waxay dhacaysaa {date}. Bixo hadda EVC Plus.', lang: 'SO' },
-];
-
 const ReminderManagement = () => {
   const { t } = useI18n();
   const [upcomingBills, setUpcomingBills] = useState([]);
@@ -100,21 +95,6 @@ const ReminderManagement = () => {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2 className="font-semibold mb-4">Message Templates</h2>
-        <div className="space-y-3">
-          {templates.map(tpl => (
-            <div key={tpl.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-medium text-sm">{tpl.name}</p>
-                <span className="badge badge-purple">{tpl.lang}</span>
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">{tpl.msg}</p>
-            </div>
-          ))}
         </div>
       </div>
     </div>
