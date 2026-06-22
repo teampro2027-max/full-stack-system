@@ -22,10 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       String? fcmToken = await NotificationService.getToken();
-      final res = await Provider.of<AuthProvider>(
-        context,
-        listen: false,
-      ).login(
+      final res = await Provider.of<AuthProvider>(context, listen: false).login(
         _emailController.text.trim().toLowerCase(),
         _passwordController.text,
         fcmToken: fcmToken,
@@ -33,10 +30,20 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (res != null && res['requiresOtp'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('OTP-ga waa la dirayaa, fadlan hubi email-kaaga.'),
+            backgroundColor: Color(0xFF2563EB),
+            duration: Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
         if (res['debugOtp'] != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Debug OTP: ${res['debugOtp']} (Copy and enter below)'),
+              content: Text(
+                'Debug OTP: ${res['debugOtp']} (Copy and enter below)',
+              ),
               backgroundColor: const Color(0xFF5B21B6),
               duration: const Duration(seconds: 15),
               behavior: SnackBarBehavior.floating,
@@ -54,13 +61,13 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(e.toString().replaceFirst('Exception: ', '')),
-        backgroundColor: const Color(0xFFEF4444),
-        behavior: SnackBarBehavior.floating,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -112,7 +119,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(width: 10),
                   Text(
                     hasSentOtp ? 'Reset Password' : 'Forgot Password',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -124,7 +134,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (!hasSentOtp) ...[
                       const Text(
                         'Fadlan geli Gmail-kaaga si aan kuugu soo dirno koodka xaqiijinta ee OTP.',
-                        style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -143,7 +156,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ] else ...[
                       RichText(
                         text: TextSpan(
-                          style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                          ),
                           children: [
                             const TextSpan(text: 'Koodhka OTP ayaa loo diray '),
                             TextSpan(
@@ -159,7 +175,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       const Text(
                         'OTP Code',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       TextField(
@@ -183,7 +202,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 12),
                       const Text(
                         'New Password',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       TextField(
@@ -194,7 +216,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              obscureNewPass ? Icons.visibility_off : Icons.visibility,
+                              obscureNewPass
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                             ),
                             onPressed: () {
                               setDialogState(() {
@@ -212,7 +236,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 12),
                       const Text(
                         'Confirm Password',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       TextField(
@@ -223,7 +250,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              obscureConfirmPass ? Icons.visibility_off : Icons.visibility,
+                              obscureConfirmPass
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                             ),
                             onPressed: () {
                               setDialogState(() {
@@ -245,7 +274,10 @@ class _LoginScreenState extends State<LoginScreen> {
               actions: [
                 TextButton(
                   onPressed: processing ? null : () => Navigator.of(ctx).pop(),
-                  child: const Text('Cancel', style: TextStyle(color: Color(0xFF9CA3AF))),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Color(0xFF9CA3AF)),
+                  ),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -259,11 +291,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? null
                       : () async {
                           if (!hasSentOtp) {
-                            final email = emailResetController.text.trim().toLowerCase();
-                            if (email.isEmpty || !email.endsWith('@gmail.com')) {
+                            final email = emailResetController.text
+                                .trim()
+                                .toLowerCase();
+                            if (email.isEmpty ||
+                                !email.endsWith('@gmail.com')) {
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Fadlan geli Gmail sax ah (@gmail.com)'),
+                                  content: Text(
+                                    'Fadlan geli Gmail sax ah (@gmail.com)',
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -275,7 +312,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 dialogContext,
                                 listen: false,
                               ).forgotPassword(email);
-                              
+
                               setDialogState(() {
                                 hasSentOtp = true;
                                 sentToEmail = email;
@@ -283,9 +320,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               });
 
                               if (res['debugOtp'] != null) {
-                                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                ScaffoldMessenger.of(
+                                  dialogContext,
+                                ).showSnackBar(
                                   SnackBar(
-                                    content: Text('Debug Reset OTP: ${res['debugOtp']} (Copy and enter below)'),
+                                    content: Text(
+                                      'Debug Reset OTP: ${res['debugOtp']} (Copy and enter below)',
+                                    ),
                                     backgroundColor: const Color(0xFF5B21B6),
                                     duration: const Duration(seconds: 15),
                                   ),
@@ -295,7 +336,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               setDialogState(() => processing = false);
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 SnackBar(
-                                  content: Text(e.toString().replaceFirst('Exception: ', '')),
+                                  content: Text(
+                                    e.toString().replaceFirst(
+                                      'Exception: ',
+                                      '',
+                                    ),
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -317,7 +363,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (newPass.length < 6) {
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Password-ku waa inuu ka koobnaadaa ugu yaraan 6 xaraf'),
+                                  content: Text(
+                                    'Password-ku waa inuu ka koobnaadaa ugu yaraan 6 xaraf',
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -326,7 +374,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (newPass != confirmPass) {
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Password-ka cusub iyo kan xaqiijinta isma laha'),
+                                  content: Text(
+                                    'Password-ka cusub iyo kan xaqiijinta isma laha',
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -343,7 +393,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               Navigator.of(ctx).pop();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Password-kaaga dib ayaa loo dejiyay si guul leh. Hadda soo gal.'),
+                                  content: Text(
+                                    'Password-kaaga dib ayaa loo dejiyay si guul leh. Hadda soo gal.',
+                                  ),
                                   backgroundColor: Colors.green,
                                 ),
                               );
@@ -351,7 +403,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               setDialogState(() => processing = false);
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
                                 SnackBar(
-                                  content: Text(e.toString().replaceFirst('Exception: ', '')),
+                                  content: Text(
+                                    e.toString().replaceFirst(
+                                      'Exception: ',
+                                      '',
+                                    ),
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -636,7 +693,10 @@ class _LoginOtpDialogState extends State<LoginOtpDialog> {
       setState(() => _verifying = true);
       String? fcmToken = await NotificationService.getToken();
       if (!mounted) return;
-      await Provider.of<AuthProvider>(context, listen: false).resendLoginOtp(widget.email, fcmToken: fcmToken);
+      await Provider.of<AuthProvider>(
+        context,
+        listen: false,
+      ).resendLoginOtp(widget.email, fcmToken: fcmToken);
       _startTimer();
       setState(() => _verifying = false);
       if (!mounted) return;
@@ -675,7 +735,10 @@ class _LoginOtpDialogState extends State<LoginOtpDialog> {
     final dialogNav = Navigator.of(context);
     final rootNav = Navigator.of(context, rootNavigator: true);
     try {
-      await Provider.of<AuthProvider>(context, listen: false).verifyLoginOtp(widget.email, _otpController.text.trim());
+      await Provider.of<AuthProvider>(
+        context,
+        listen: false,
+      ).verifyLoginOtp(widget.email, _otpController.text.trim());
       dialogNav.pop();
       rootNav.pushReplacementNamed('/dashboard');
     } catch (e) {
@@ -695,7 +758,8 @@ class _LoginOtpDialogState extends State<LoginOtpDialog> {
   Widget build(BuildContext context) {
     int minutes = _timeLeft ~/ 60;
     int seconds = _timeLeft % 60;
-    String timerText = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    String timerText =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -707,10 +771,17 @@ class _LoginOtpDialogState extends State<LoginOtpDialog> {
               color: const Color(0xFF5B21B6).withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.mark_email_read_outlined, color: Color(0xFF5B21B6), size: 22),
+            child: const Icon(
+              Icons.mark_email_read_outlined,
+              color: Color(0xFF5B21B6),
+              size: 22,
+            ),
           ),
           const SizedBox(width: 10),
-          const Text('Verify Login', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Verify Login',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
       content: Column(
@@ -722,8 +793,16 @@ class _LoginOtpDialogState extends State<LoginOtpDialog> {
             text: TextSpan(
               style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
               children: [
-                const TextSpan(text: 'A 6-digit verification code was sent to\n'),
-                TextSpan(text: widget.email, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5B21B6))),
+                const TextSpan(
+                  text: 'A 6-digit verification code was sent to\n',
+                ),
+                TextSpan(
+                  text: widget.email,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5B21B6),
+                  ),
+                ),
               ],
             ),
           ),
@@ -731,43 +810,92 @@ class _LoginOtpDialogState extends State<LoginOtpDialog> {
           TextField(
             controller: _otpController,
             keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 10, color: Color(0xFF111827)),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 10,
+              color: Color(0xFF111827),
+            ),
             decoration: InputDecoration(
               hintText: '------',
-              hintStyle: const TextStyle(letterSpacing: 10, color: Color(0xFFD1D5DB)),
+              hintStyle: const TextStyle(
+                letterSpacing: 10,
+                color: Color(0xFFD1D5DB),
+              ),
               filled: true,
               fillColor: const Color(0xFFF9FAFB),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF5B21B6), width: 2)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF5B21B6),
+                  width: 2,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 15),
           if (_timeLeft > 0)
-            Text('Code expires in: $timerText', style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold))
+            Text(
+              'Code expires in: $timerText',
+              style: const TextStyle(
+                color: Color(0xFFEF4444),
+                fontWeight: FontWeight.bold,
+              ),
+            )
           else
             TextButton(
               onPressed: _verifying ? null : _resendOtp,
-              child: const Text('Try Again / Resend OTP', style: TextStyle(color: Color(0xFF5B21B6), fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Try Again / Resend OTP',
+                style: TextStyle(
+                  color: Color(0xFF5B21B6),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: _verifying ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel', style: TextStyle(color: Color(0xFF9CA3AF))),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: Color(0xFF9CA3AF)),
+          ),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF5B21B6),
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
           ),
           onPressed: _verifying ? null : _verifyOtp,
-          child: _verifying ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Verify'),
+          child: _verifying
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Text('Verify'),
         ),
       ],
     );

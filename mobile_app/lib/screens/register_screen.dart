@@ -56,7 +56,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (prefix.isEmpty || prefix.length < 3) return false;
     if (!RegExp(r'^[a-zA-Z]').hasMatch(prefix)) return false;
     final fullEmail = '${prefix.toLowerCase()}@gmail.com';
-    if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@gmail\.com$').hasMatch(fullEmail)) return false;
+    if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@gmail\.com$').hasMatch(fullEmail))
+      return false;
     return true;
   }
 
@@ -72,7 +73,10 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (value.length < 6) return false;
     if (!RegExp(r'[a-zA-Z]').hasMatch(value)) return false;
     if (!RegExp(r'\d').hasMatch(value)) return false;
-    if (!RegExp(r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\x22,<>\.\?\/\\|`~]').hasMatch(value)) return false;
+    if (!RegExp(
+      r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\x22,<>\.\?\/\\|`~]',
+    ).hasMatch(value))
+      return false;
     return true;
   }
 
@@ -130,10 +134,20 @@ class _RegisterScreenState extends State<RegisterScreen>
       // Haddii backend-ku uu email-ka diray, wuxuu soo celinayaa requiresOtp: true
       // Haddii kale, check-ga backend-ka logs-kiisa fiiri
       if (res != null && res['requiresOtp'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('OTP-ga waa la dirayaa, fadlan hubi email-kaaga.'),
+            backgroundColor: Color(0xFF2563EB),
+            duration: Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
         if (res['debugOtp'] != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Debug OTP: ${res['debugOtp']} (Copy and enter below)'),
+              content: Text(
+                'Debug OTP: ${res['debugOtp']} (Copy and enter below)',
+              ),
               backgroundColor: const Color(0xFF4F46E5),
               duration: const Duration(seconds: 15),
               behavior: SnackBarBehavior.floating,
@@ -298,9 +312,14 @@ class _RegisterScreenState extends State<RegisterScreen>
                               isEmpty: _nameController.text.isEmpty,
                             ),
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) return 'Please enter your full name';
-                              if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) return 'Name can only contain letters';
-                              if (value.trim().length < 2) return 'Name must be at least 2 characters';
+                              if (value == null || value.trim().isEmpty)
+                                return 'Please enter your full name';
+                              if (!RegExp(
+                                r'^[a-zA-Z\s]+$',
+                              ).hasMatch(value.trim()))
+                                return 'Name can only contain letters';
+                              if (value.trim().length < 2)
+                                return 'Name must be at least 2 characters';
                               return null;
                             },
                           ),
@@ -318,28 +337,36 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 RegExp(r'[a-zA-Z0-9._+\-]'),
                               ),
                             ],
-                            decoration: _dynamicDecoration(
-                              hint: 'yourname',
-                              icon: Icons.email_outlined,
-                              isValid: _isGmailValid,
-                              isEmpty: _gmailPrefixController.text.isEmpty,
-                            ).copyWith(
-                              suffix: const Text(
-                                '@gmail.com',
-                                style: TextStyle(
-                                  color: Color(0xFF4F46E5),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                            decoration:
+                                _dynamicDecoration(
+                                  hint: 'yourname',
+                                  icon: Icons.email_outlined,
+                                  isValid: _isGmailValid,
+                                  isEmpty: _gmailPrefixController.text.isEmpty,
+                                ).copyWith(
+                                  suffix: const Text(
+                                    '@gmail.com',
+                                    style: TextStyle(
+                                      color: Color(0xFF4F46E5),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
                             validator: (value) {
                               final prefix = value?.trim() ?? '';
-                              if (prefix.isEmpty) return 'Please enter your Gmail username';
-                              if (!RegExp(r'^[a-zA-Z]').hasMatch(prefix)) return 'Must start with a letter';
-                              if (prefix.length < 3) return 'Gmail username must be at least 3 characters';
-                              final fullEmail = '${prefix.toLowerCase()}@gmail.com';
-                              if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@gmail\.com$').hasMatch(fullEmail)) return 'Enter a valid Gmail username';
+                              if (prefix.isEmpty)
+                                return 'Please enter your Gmail username';
+                              if (!RegExp(r'^[a-zA-Z]').hasMatch(prefix))
+                                return 'Must start with a letter';
+                              if (prefix.length < 3)
+                                return 'Gmail username must be at least 3 characters';
+                              final fullEmail =
+                                  '${prefix.toLowerCase()}@gmail.com';
+                              if (!RegExp(
+                                r'^[a-zA-Z0-9._%+\-]+@gmail\.com$',
+                              ).hasMatch(fullEmail))
+                                return 'Enter a valid Gmail username';
                               return null;
                             },
                           ),
@@ -384,8 +411,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                             ),
                             validator: (value) {
                               final normalized = _normalizePhone(value ?? '');
-                              if (normalized.isEmpty) return 'Please enter your phone number';
-                              if (normalized.length < 7 || normalized.length > 10) return 'Please enter 7-10 digits';
+                              if (normalized.isEmpty)
+                                return 'Please enter your phone number';
+                              if (normalized.length < 7 ||
+                                  normalized.length > 10)
+                                return 'Please enter 7-10 digits';
                               return null;
                             },
                           ),
@@ -397,31 +427,41 @@ class _RegisterScreenState extends State<RegisterScreen>
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            decoration: _dynamicDecoration(
-                              hint: 'Min. 6 chars (letters, numbers, symbols)',
-                              icon: Icons.lock_outline,
-                              isValid: _isPasswordValid,
-                              isEmpty: _passwordController.text.isEmpty,
-                            ).copyWith(
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: const Color(0xFF9CA3AF),
-                                  size: 20,
+                            decoration:
+                                _dynamicDecoration(
+                                  hint:
+                                      'Min. 6 chars (letters, numbers, symbols)',
+                                  icon: Icons.lock_outline,
+                                  isValid: _isPasswordValid,
+                                  isEmpty: _passwordController.text.isEmpty,
+                                ).copyWith(
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: const Color(0xFF9CA3AF),
+                                      size: 20,
+                                    ),
+                                    onPressed: () => setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    ),
+                                  ),
                                 ),
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                              ),
-                            ),
                             validator: (value) {
-                              if (value == null || value.isEmpty) return 'Password is required';
-                              if (value.length < 6) return 'At least 6 characters required';
-                              if (!RegExp(r'[a-zA-Z]').hasMatch(value)) return 'Must contain a letter';
-                              if (!RegExp(r'\d').hasMatch(value)) return 'Must contain a number';
-                              if (!RegExp(r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\x22,<>\.\?\/\\|`~]').hasMatch(value)) return 'Must contain a symbol';
+                              if (value == null || value.isEmpty)
+                                return 'Password is required';
+                              if (value.length < 6)
+                                return 'At least 6 characters required';
+                              if (!RegExp(r'[a-zA-Z]').hasMatch(value))
+                                return 'Must contain a letter';
+                              if (!RegExp(r'\d').hasMatch(value))
+                                return 'Must contain a number';
+                              if (!RegExp(
+                                r'[!@#\$%\^&\*\(\)_\+\-\=\[\]\{\};:\x27\x22,<>\.\?\/\\|`~]',
+                              ).hasMatch(value))
+                                return 'Must contain a symbol';
                               return null;
                             },
                           ),
@@ -517,22 +557,42 @@ class _RegisterScreenState extends State<RegisterScreen>
     Widget? prefixIcon,
     Widget? prefix,
   }) {
-    Color borderColor = isEmpty ? const Color(0xFFE5E7EB) : (isValid ? Colors.green : Colors.red);
-    Color focusColor = isEmpty ? const Color(0xFF4F46E5) : (isValid ? Colors.green : Colors.red);
-    
+    Color borderColor = isEmpty
+        ? const Color(0xFFE5E7EB)
+        : (isValid ? Colors.green : Colors.red);
+    Color focusColor = isEmpty
+        ? const Color(0xFF4F46E5)
+        : (isValid ? Colors.green : Colors.red);
+
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 14),
-      prefixIcon: prefixIcon ?? Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
+      prefixIcon:
+          prefixIcon ?? Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
       prefix: prefix,
       filled: true,
       fillColor: const Color(0xFFF9FAFB),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: focusColor, width: 2)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red)),
-      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 2)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: focusColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
     );
   }
 }
@@ -585,7 +645,10 @@ class _OtpDialogState extends State<OtpDialog> {
       setState(() => _verifying = true);
       String? fcmToken = await NotificationService.getToken();
       if (!mounted) return;
-      await Provider.of<AuthProvider>(context, listen: false).resendRegisterOtp(widget.email, fcmToken: fcmToken);
+      await Provider.of<AuthProvider>(
+        context,
+        listen: false,
+      ).resendRegisterOtp(widget.email, fcmToken: fcmToken);
       _startTimer();
       setState(() => _verifying = false);
       if (!mounted) return;
@@ -624,7 +687,10 @@ class _OtpDialogState extends State<OtpDialog> {
     final dialogNav = Navigator.of(context);
     final rootNav = Navigator.of(context, rootNavigator: true);
     try {
-      await Provider.of<AuthProvider>(context, listen: false).verifyRegisterOtp(widget.email, _otpController.text.trim());
+      await Provider.of<AuthProvider>(
+        context,
+        listen: false,
+      ).verifyRegisterOtp(widget.email, _otpController.text.trim());
       dialogNav.pop();
       rootNav.pushReplacementNamed('/dashboard');
     } catch (e) {
@@ -644,7 +710,8 @@ class _OtpDialogState extends State<OtpDialog> {
   Widget build(BuildContext context) {
     int minutes = _timeLeft ~/ 60;
     int seconds = _timeLeft % 60;
-    String timerText = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    String timerText =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -656,10 +723,17 @@ class _OtpDialogState extends State<OtpDialog> {
               color: const Color(0xFF4F46E5).withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.mark_email_read_outlined, color: Color(0xFF4F46E5), size: 22),
+            child: const Icon(
+              Icons.mark_email_read_outlined,
+              color: Color(0xFF4F46E5),
+              size: 22,
+            ),
           ),
           const SizedBox(width: 10),
-          const Text('Verify Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Verify Account',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
       content: Column(
@@ -671,8 +745,16 @@ class _OtpDialogState extends State<OtpDialog> {
             text: TextSpan(
               style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
               children: [
-                const TextSpan(text: 'A 6-digit verification code was sent to\n'),
-                TextSpan(text: widget.email, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                const TextSpan(
+                  text: 'A 6-digit verification code was sent to\n',
+                ),
+                TextSpan(
+                  text: widget.email,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4F46E5),
+                  ),
+                ),
               ],
             ),
           ),
@@ -680,43 +762,92 @@ class _OtpDialogState extends State<OtpDialog> {
           TextField(
             controller: _otpController,
             keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 10, color: Color(0xFF111827)),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 10,
+              color: Color(0xFF111827),
+            ),
             decoration: InputDecoration(
               hintText: '------',
-              hintStyle: const TextStyle(letterSpacing: 10, color: Color(0xFFD1D5DB)),
+              hintStyle: const TextStyle(
+                letterSpacing: 10,
+                color: Color(0xFFD1D5DB),
+              ),
               filled: true,
               fillColor: const Color(0xFFF9FAFB),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: Color(0xFF4F46E5),
+                  width: 2,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 15),
           if (_timeLeft > 0)
-            Text('Code expires in: $timerText', style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold))
+            Text(
+              'Code expires in: $timerText',
+              style: const TextStyle(
+                color: Color(0xFFEF4444),
+                fontWeight: FontWeight.bold,
+              ),
+            )
           else
             TextButton(
               onPressed: _verifying ? null : _resendOtp,
-              child: const Text('Try Again / Resend OTP', style: TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Try Again / Resend OTP',
+                style: TextStyle(
+                  color: Color(0xFF4F46E5),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: _verifying ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel', style: TextStyle(color: Color(0xFF9CA3AF))),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: Color(0xFF9CA3AF)),
+          ),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF4F46E5),
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
           ),
           onPressed: _verifying ? null : _verifyOtp,
-          child: _verifying ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Verify'),
+          child: _verifying
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Text('Verify'),
         ),
       ],
     );
