@@ -18,19 +18,28 @@ const sendOTP = async (email, otp) => {
     });
 
     const mailOptions = {
-      from: `"BillTrack Pro" <${process.env.SMTP_EMAIL}>`,
+      from: `"BillTrack Pro Support" <${process.env.SMTP_EMAIL}>`,
       to: email,
-      subject: 'Xaqiijinta Koontada (OTP Code)',
+      subject: 'BillTrack Pro: Koodka Xaqiijinta Koontada (Verification OTP)',
+      text: `Haye, koodkaaga xaqiijinta koontada BillTrack Pro waa: ${otp}. Koodhan wuxuu shaqaynayaa muddo 10 daqiiqo ah. Fadlan ha cidna la wadaagin koodkan. Mahadsanid, Kooxda BillTrack Pro.`,
       html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #4F46E5;">BillTrack Pro</h2>
-          <p>Waad ku mahadsantahay is-diiwaangelintaada. Fadlan isticmaal koodka hoose si aad u xaqiijiso email-kaaga:</p>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 10px; padding: 20px; background: #f4f4f4; text-align: center; color: #111827; border-radius: 8px;">
-            ${otp}
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff; color: #1f2937;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h2 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">BillTrack Pro</h2>
+            <p style="color: #6b7280; font-size: 14px; margin: 5px 0 0 0;">Maareynta Biilasha si Fudud</p>
           </div>
-          <p style="margin-top: 20px; color: #6B7280;">Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.</p>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #9CA3AF;">Haddii aadan adigu is-diiwaangelin, fadlan iska indhatir email-kan.</p>
+          <div style="padding: 20px; border-radius: 8px; background-color: #f9fafb; border: 1px solid #f3f4f6;">
+            <p style="font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Waad ku mahadsan tahay is-diiwaangelintaada ama gelitaankaaga. Fadlan isticmaal koodka hoose si aad u xaqiijiso email-kaaga:</p>
+            <div style="font-size: 36px; font-weight: 800; letter-spacing: 12px; padding: 18px; background: #ffffff; text-align: center; color: #111827; border-radius: 8px; border: 1px solid #e5e7eb; margin: 10px 0 20px 0; font-family: monospace;">
+              ${otp}
+            </div>
+            <p style="font-size: 13px; color: #dc2626; font-weight: bold; margin: 0 0 8px 0; text-align: center;">Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.</p>
+            <p style="font-size: 14px; line-height: 1.5; color: #4b5563; margin: 0;">Fadlan ha la wadaagin koodkan cid kale si aad u ilaaliso badbaadada koontadaada.</p>
+          </div>
+          <div style="margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px; font-size: 12px; color: #9ca3af; text-align: center; line-height: 1.5;">
+            <p style="margin: 0 0 8px 0;">BillTrack Pro Corp. &copy; 2026. All rights reserved.</p>
+            <p style="margin: 0;">Haddii aadan adigu is-diiwaangelin ama aadan codsan koodkan, fadlan iska indhatir email-kan.</p>
+          </div>
         </div>
       `,
     };
@@ -103,19 +112,28 @@ const sendResetOTP = async (email, otp) => {
     });
 
     const mailOptions = {
-      from: `"BillTrack Pro" <${process.env.SMTP_EMAIL}>`,
+      from: `"BillTrack Pro Support" <${process.env.SMTP_EMAIL}>`,
       to: email,
-      subject: 'Koodka Dib-u-dejinta Password-ka (OTP Code)',
+      subject: 'BillTrack Pro: Dib-u-dejinta Password-ka (Password Reset OTP)',
+      text: `Haye, koodkaaga dib-u-dejinta password-ka BillTrack Pro waa: ${otp}. Koodhan wuxuu shaqaynayaa muddo 10 daqiiqo ah. Fadlan ha cidna la wadaagin koodkan. Mahadsanid, Kooxda BillTrack Pro.`,
       html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #4F46E5;">BillTrack Pro</h2>
-          <p>Fadlan isticmaal koodka hoose si aad dib ugu dejiso password-kaaga:</p>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 10px; padding: 20px; background: #f4f4f4; text-align: center; color: #111827; border-radius: 8px;">
-            ${otp}
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff; color: #1f2937;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h2 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">BillTrack Pro</h2>
+            <p style="color: #6b7280; font-size: 14px; margin: 5px 0 0 0;">Maareynta Biilasha si Fudud</p>
           </div>
-          <p style="margin-top: 20px; color: #6B7280;">Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.</p>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #9CA3AF;">Haddii aadan adigu codsan dib-u-dejinta password-ka, fadlan iska indhatir email-kan.</p>
+          <div style="padding: 20px; border-radius: 8px; background-color: #f9fafb; border: 1px solid #f3f4f6;">
+            <p style="font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Fadlan isticmaal koodka hoose si aad dib ugu dejiso password-kaaga:</p>
+            <div style="font-size: 36px; font-weight: 800; letter-spacing: 12px; padding: 18px; background: #ffffff; text-align: center; color: #111827; border-radius: 8px; border: 1px solid #e5e7eb; margin: 10px 0 20px 0; font-family: monospace;">
+              ${otp}
+            </div>
+            <p style="font-size: 13px; color: #dc2626; font-weight: bold; margin: 0 0 8px 0; text-align: center;">Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.</p>
+            <p style="font-size: 14px; line-height: 1.5; color: #4b5563; margin: 0;">Fadlan ha la wadaagin koodkan cid kale si aad u ilaaliso badbaadada koontadaada.</p>
+          </div>
+          <div style="margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px; font-size: 12px; color: #9ca3af; text-align: center; line-height: 1.5;">
+            <p style="margin: 0 0 8px 0;">BillTrack Pro Corp. &copy; 2026. All rights reserved.</p>
+            <p style="margin: 0;">Haddii aadan adigu codsan koodkan, fadlan iska indhatir email-kan.</p>
+          </div>
         </div>
       `,
     };

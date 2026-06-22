@@ -32,6 +32,11 @@ class AuthProvider with ChangeNotifier {
 
       final data = json.decode(response.body);
       if (response.statusCode == 200) {
+        if (data['requiresOtp'] == true) {
+          _isLoading = false;
+          notifyListeners();
+          return data;
+        }
         _token = data['token'];
         _user = data;
         if (_token != null) {
@@ -41,6 +46,7 @@ class AuthProvider with ChangeNotifier {
           NotificationService.updateTokenOnServer();
         }
         notifyListeners();
+        return null;
       } else {
         throw Exception(data['message'] ?? 'Login failed');
       }
@@ -149,6 +155,71 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/auth/resend-register-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          if (fcmToken != null) 'fcmToken': fcmToken,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      _isLoading = false;
+      notifyListeners();
+
+      if (response.statusCode != 200) {
+        throw Exception(data['message'] ?? 'Failed to resend OTP');
+      }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> verifyLoginOtp(String email, String otp) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/verify-login-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _token = data['token'];
+        _user = data;
+        if (_token != null) {
+          await _storage.write(key: 'jwt', value: _token!);
+          await _storage.write(key: 'user', value: json.encode(data));
+          NotificationService.updateTokenOnServer();
+        }
+        notifyListeners();
+      } else {
+        throw Exception(data['message'] ?? 'Verification failed');
+      }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> resendLoginOtp(String email, {String? fcmToken}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/resend-login-otp'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'email': email,

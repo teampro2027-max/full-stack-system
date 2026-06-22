@@ -170,9 +170,13 @@ const verifyRegisterOtp = async (req, res) => {
 };
 
 const loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, fcmToken } = req.body;
     try {
-        const user = await User.findOne({ email });
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
@@ -181,9 +185,94 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ message: 'Please verify your email registration first.' });
         }
 
-        await AuditLog.create({ userId: user._id, action: 'LOGIN', resource: 'User', details: { email } });
+        // Bypassing OTP for admin role to avoid breaking React Web Admin panel
+        if (user.role === 'admin') {
+            await AuditLog.create({ userId: user._id, action: 'LOGIN', resource: 'User', details: { email: normalizedEmail } });
+            return res.json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                token: generateToken(user._id)
+            });
+        }
 
-        res.json({
+        // Generate 6-digit OTP code for standard users
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+        user.otp = otp;
+        user.otpExpiry = otpExpiry;
+        await user.save();
+
+        // Send OTP to email in the background
+        sendOTP(normalizedEmail, otp).then(sent => {
+            if (!sent) {
+                console.warn(`⚠️ SendGrid failed to send login OTP email to ${normalizedEmail}.`);
+            } else {
+                console.log(`✅ Login OTP email sent successfully to ${normalizedEmail}`);
+            }
+        }).catch(err => {
+            console.error('Background login OTP email error:', err);
+        });
+
+        // Send OTP Push Notification if fcmToken is available
+        if (fcmToken && admin) {
+            const message = {
+                notification: { 
+                    title: 'Xaqiijinta Gelitaanka (Login OTP)', 
+                    body: `Koodkaaga gelitaanku waa: ${otp}. Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.` 
+                },
+                token: fcmToken
+            };
+            admin.messaging().send(message)
+                .then(() => console.log(`✅ Login OTP Push Notification sent directly to device.`))
+                .catch(err => console.error('⚠️ Failed to send Login OTP Push Notification:', err));
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'OTP sent to email',
+            requiresOtp: true,
+            email: normalizedEmail,
+            debugOtp: otp
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const verifyLoginOtp = async (req, res) => {
+    const { email, otp } = req.body;
+    try {
+        if (!email || !otp) {
+            return res.status(400).json({ message: 'Email and OTP are required' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: normalizedEmail });
+        if (!user) {
+            return res.status(400).json({ message: 'User not found.' });
+        }
+
+        if (user.status !== 'active') {
+            return res.status(400).json({ message: 'This account is not active. Please register first.' });
+        }
+
+        if (user.otp !== otp.trim() || user.otpExpiry < new Date()) {
+            return res.status(400).json({ message: 'Incorrect or expired verification code. Please try again.' });
+        }
+
+        // Clear OTP fields
+        user.otp = undefined;
+        user.otpExpiry = undefined;
+        await user.save();
+
+        await AuditLog.create({ userId: user._id, action: 'LOGIN', resource: 'User', details: { email: normalizedEmail } });
+
+        res.status(200).json({
             _id: user._id,
             name: user.name,
             email: user.email,
@@ -192,6 +281,53 @@ const loginUser = async (req, res) => {
             token: generateToken(user._id)
         });
     } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const resendLoginOtp = async (req, res) => {
+    const { email, fcmToken } = req.body;
+    try {
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+        
+        const user = await User.findOne({ email: normalizedEmail, status: 'active' });
+        if (!user) {
+            return res.status(400).json({ message: 'No active user found for this email' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+        user.otp = otp;
+        user.otpExpiry = otpExpiry;
+        await user.save();
+
+        sendOTP(normalizedEmail, otp).catch(err => console.error('Background OTP email error:', err));
+
+        if (fcmToken && admin) {
+            const message = {
+                notification: { 
+                    title: 'Xaqiijinta Gelitaanka (Login OTP)', 
+                    body: `Koodkaaga cusub waa: ${otp}. Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.` 
+                },
+                token: fcmToken
+            };
+            admin.messaging().send(message).catch(err => console.error('⚠️ Failed to send Login OTP Push Notification:', err));
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'OTP resent successfully',
+            requiresOtp: true,
+            email: normalizedEmail,
+            debugOtp: otp
+        });
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -339,5 +475,5 @@ const resendRegisterOtp = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, verifyRegisterOtp, loginUser, forgotPassword, resetPassword, resendRegisterOtp };
+module.exports = { registerUser, verifyRegisterOtp, loginUser, forgotPassword, resetPassword, resendRegisterOtp, verifyLoginOtp, resendLoginOtp };
 
