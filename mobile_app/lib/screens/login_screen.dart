@@ -21,10 +21,15 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
+      String? fcmToken = await NotificationService.getToken();
       final res = await Provider.of<AuthProvider>(
         context,
         listen: false,
-      ).login(_emailController.text.trim().toLowerCase(), _passwordController.text);
+      ).login(
+        _emailController.text.trim().toLowerCase(),
+        _passwordController.text,
+        fcmToken: fcmToken,
+      );
       if (!mounted) return;
 
       if (res != null && res['requiresOtp'] == true) {

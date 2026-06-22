@@ -19,7 +19,11 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   Map<String, dynamic>? get user => _user;
 
-  Future<dynamic> login(String email, String password) async {
+  Future<dynamic> login(
+    String email,
+    String password, {
+    String? fcmToken,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
@@ -27,7 +31,11 @@ class AuthProvider with ChangeNotifier {
       final response = await http.post(
         Uri.parse('$_baseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password}),
+        body: json.encode({
+          'email': email,
+          'password': password,
+          if (fcmToken != null) 'fcmToken': fcmToken,
+        }),
       );
 
       final data = json.decode(response.body);
@@ -119,10 +127,7 @@ class AuthProvider with ChangeNotifier {
       final response = await http.post(
         Uri.parse('$_baseUrl/auth/verify-register-otp'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'otp': otp,
-        }),
+        body: json.encode({'email': email, 'otp': otp}),
       );
 
       final data = json.decode(response.body);
@@ -184,10 +189,7 @@ class AuthProvider with ChangeNotifier {
       final response = await http.post(
         Uri.parse('$_baseUrl/auth/verify-login-otp'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'otp': otp,
-        }),
+        body: json.encode({'email': email, 'otp': otp}),
       );
 
       final data = json.decode(response.body);
@@ -268,7 +270,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> resetPassword(String email, String otp, String newPassword) async {
+  Future<void> resetPassword(
+    String email,
+    String otp,
+    String newPassword,
+  ) async {
     _isLoading = true;
     notifyListeners();
 
