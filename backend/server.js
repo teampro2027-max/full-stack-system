@@ -163,14 +163,79 @@ app.get('/api/diag/email-test', async (req, res) => {
             verify5Error = err.message;
         }
 
+        // Test 6: Direct IPv4 resolve for port 465 (secure)
+        let verify6Success = false;
+        let verify6Error = null;
+        let resolvedIp = null;
+        try {
+            const dns = require('dns').promises;
+            const ips = await dns.resolve4('smtp.gmail.com');
+            if (ips && ips.length > 0) {
+                resolvedIp = ips[0];
+                const transporter6 = nodemailer.createTransport({
+                    host: resolvedIp,
+                    port: 465,
+                    secure: true,
+                    connectionTimeout: 5000,
+                    greetingTimeout: 5000,
+                    socketTimeout: 5000,
+                    auth: {
+                        user: smtpEmail,
+                        pass: smtpPassword,
+                    },
+                    tls: {
+                        servername: 'smtp.gmail.com'
+                    }
+                });
+                await transporter6.verify();
+                verify6Success = true;
+            } else {
+                verify6Error = "No IPv4 address resolved for smtp.gmail.com";
+            }
+        } catch (err) {
+            verify6Error = err.message;
+        }
+
+        // Test 7: Direct IPv4 resolve for port 587 (TLS)
+        let verify7Success = false;
+        let verify7Error = null;
+        try {
+            if (resolvedIp) {
+                const transporter7 = nodemailer.createTransport({
+                    host: resolvedIp,
+                    port: 587,
+                    secure: false,
+                    connectionTimeout: 5000,
+                    greetingTimeout: 5000,
+                    socketTimeout: 5000,
+                    auth: {
+                        user: smtpEmail,
+                        pass: smtpPassword,
+                    },
+                    tls: {
+                        servername: 'smtp.gmail.com'
+                    }
+                });
+                await transporter7.verify();
+                verify7Success = true;
+            } else {
+                verify7Error = "No resolved IPv4 IP available";
+            }
+        } catch (err) {
+            verify7Error = err.message;
+        }
+
         return res.status(200).json({
-            success: verify1Success || verify2Success || verify3Success || verify4Success || verify5Success,
+            success: verify1Success || verify2Success || verify3Success || verify4Success || verify5Success || verify6Success || verify7Success,
             SMTP_EMAIL: smtpEmail,
+            resolvedIp,
             test1_gmail_service: { success: verify1Success, error: verify1Error },
             test2_port465: { success: verify2Success, error: verify2Error },
             test3_port587: { success: verify3Success, error: verify3Error },
             test4_port465_ipv4: { success: verify4Success, error: verify4Error },
-            test5_port587_ipv4: { success: verify5Success, error: verify5Error }
+            test5_port587_ipv4: { success: verify5Success, error: verify5Error },
+            test6_port465_directIp: { success: verify6Success, error: verify6Error },
+            test7_port587_directIp: { success: verify7Success, error: verify7Error }
         });
     } catch (err) {
         return res.status(500).json({
