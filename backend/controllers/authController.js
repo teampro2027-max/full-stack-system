@@ -46,8 +46,13 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'This Gmail is already registered. Please sign in instead.' });
         }
         const phoneUser = await User.findOne({ phone: normalizedPhone });
-        if (phoneUser && phoneUser.status === 'active') {
-            return res.status(400).json({ message: 'This phone number is already registered.' });
+        if (phoneUser) {
+            if (phoneUser.status === 'active') {
+                return res.status(400).json({ message: 'This phone number is already registered.' });
+            }
+            if (phoneUser.email !== normalizedEmail) {
+                return res.status(400).json({ message: 'This phone number is already registered to another account.' });
+            }
         }
 
         // Generate 6-digit OTP code
@@ -113,7 +118,8 @@ const registerUser = async (req, res) => {
             success: true,
             message: 'OTP sent to email',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            debugOtp: otp
         });
     } catch (error) {
         console.error(error);
@@ -467,7 +473,8 @@ const resendRegisterOtp = async (req, res) => {
             success: true,
             message: 'OTP resent successfully',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            debugOtp: otp
         });
     } catch (error) {
         console.error(error);
