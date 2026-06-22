@@ -115,12 +115,62 @@ app.get('/api/diag/email-test', async (req, res) => {
             verify3Error = err.message;
         }
 
+        // Test 4: port 465 (secure) forcing IPv4
+        const transporter4 = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            family: 4,
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 5000,
+            auth: {
+                user: smtpEmail,
+                pass: smtpPassword,
+            },
+        });
+
+        let verify4Success = false;
+        let verify4Error = null;
+        try {
+            await transporter4.verify();
+            verify4Success = true;
+        } catch (err) {
+            verify4Error = err.message;
+        }
+
+        // Test 5: port 587 (TLS) forcing IPv4
+        const transporter5 = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            family: 4,
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 5000,
+            auth: {
+                user: smtpEmail,
+                pass: smtpPassword,
+            },
+        });
+
+        let verify5Success = false;
+        let verify5Error = null;
+        try {
+            await transporter5.verify();
+            verify5Success = true;
+        } catch (err) {
+            verify5Error = err.message;
+        }
+
         return res.status(200).json({
-            success: verify1Success || verify2Success || verify3Success,
+            success: verify1Success || verify2Success || verify3Success || verify4Success || verify5Success,
             SMTP_EMAIL: smtpEmail,
             test1_gmail_service: { success: verify1Success, error: verify1Error },
             test2_port465: { success: verify2Success, error: verify2Error },
-            test3_port587: { success: verify3Success, error: verify3Error }
+            test3_port587: { success: verify3Success, error: verify3Error },
+            test4_port465_ipv4: { success: verify4Success, error: verify4Error },
+            test5_port587_ipv4: { success: verify5Success, error: verify5Error }
         });
     } catch (err) {
         return res.status(500).json({
