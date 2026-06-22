@@ -10,15 +10,16 @@ const sendOTP = async (email, otp) => {
     }
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465, // Si degdeg ah ayuu ugu dirayaa port-gan
+      secure: true, // Wuxuu isticmaalayaa SSL toos ah
       auth: {
-        // Ku dar kuwan .env file-kaaga
         user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS, // Isticmaal "App Password" ee Gmail-ka
+        pass: process.env.EMAIL_PASS,
       },
-      connectionTimeout: 20000, // 20 seconds connection timeout
-      greetingTimeout: 20000,   // 20 seconds greeting timeout
-      socketTimeout: 20000,     // 20 seconds socket timeout
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 20000,
     });
 
     const mailOptions = {
@@ -39,17 +40,11 @@ const sendOTP = async (email, otp) => {
       `,
     };
 
-    // BYPASS: Ku bedelay Bypass si uusan Render u fashilmin
-    console.log(`\n=== OTP TIJAABO AH (Bypass) ===\nEmail: ${email}\nOTP Code: ${otp}\n===============================\n`);
-    return true;
-
-    /* Koodhkii hore ee dhabta ahaa waan istaajiyay:
     await transporter.sendMail(mailOptions);
     return true;
-    */
   } catch (error) {
     console.error('Email sending failed:', error);
-    return true; // Bypass: Xataa haddii Error yimaado, u diid inuu fashilmo!
+    return false; // Hadda wuu fashilmayaa haddii emailka uusan dhab ahaan u dirmin
   }
 };
 
