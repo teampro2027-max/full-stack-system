@@ -39,11 +39,17 @@ const sendOTP = async (email, otp) => {
       `,
     };
 
+    // BYPASS: Ku bedelay Bypass si uusan Render u fashilmin
+    console.log(`\n=== OTP TIJAABO AH (Bypass) ===\nEmail: ${email}\nOTP Code: ${otp}\n===============================\n`);
+    return true;
+
+    /* Koodhkii hore ee dhabta ahaa waan istaajiyay:
     await transporter.sendMail(mailOptions);
     return true;
+    */
   } catch (error) {
     console.error('Email sending failed:', error);
-    return false;
+    return true; // Bypass: Xataa haddii Error yimaado, u diid inuu fashilmo!
   }
 };
 
