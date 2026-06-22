@@ -118,7 +118,8 @@ const registerUser = async (req, res) => {
             success: true,
             message: 'OTP sent to email',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            debugOtp: otp
         });
     } catch (error) {
         console.error(error);
@@ -240,7 +241,8 @@ const loginUser = async (req, res) => {
             success: true,
             message: 'OTP sent to email',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            debugOtp: otp
         });
     } catch (error) {
         console.error(error);
@@ -327,7 +329,8 @@ const resendLoginOtp = async (req, res) => {
             success: true,
             message: 'OTP resent successfully',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            debugOtp: otp
         });
     } catch (error) {
         console.error(error);
@@ -470,7 +473,8 @@ const resendRegisterOtp = async (req, res) => {
             success: true,
             message: 'OTP resent successfully',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            debugOtp: otp
         });
     } catch (error) {
         console.error(error);
