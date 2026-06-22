@@ -79,27 +79,21 @@ const registerUser = async (req, res) => {
             });
         }
 
-        // Send OTP to Gmail
-        const emailSent = await sendOTP(normalizedEmail, otp);
-        if (!emailSent) {
-            console.warn(`\n==================================================`);
-            console.warn(`⚠️ SMTP failed to send OTP email to ${normalizedEmail}.`);
-            console.warn(`==================================================\n`);
-
-            // Revert database modifications
-            if (emailUser) {
-                emailUser.otp = undefined;
-                emailUser.otpExpiry = undefined;
-                await emailUser.save();
-            } else if (savedUser) {
-                await User.deleteOne({ _id: savedUser._id });
+        // OTP-ga email-ka gadaashiisa u dir (background) si Mobile App-ku degdeg ugu helo jawaab
+        // Taasi waxay ka hortagtaa "connection abort" error-ka
+        sendOTP(normalizedEmail, otp).then(sent => {
+            if (!sent) {
+                console.warn(`\n==================================================`);
+                console.warn(`⚠️ SendGrid failed to send OTP email to ${normalizedEmail}.`);
+                console.warn(`==================================================\n`);
+            } else {
+                console.log(`✅ OTP email sent successfully to ${normalizedEmail}`);
             }
+        }).catch(err => {
+            console.error('Background OTP email error:', err);
+        });
 
-            return res.status(400).json({
-                message: 'Failed to send OTP verification email. Please make sure the Gmail address exists and is valid.'
-            });
-        }
-
+        // Isla markiiba jawaab u cel Mobile App-ka — ha sugin email-ka
         res.status(200).json({
             success: true,
             message: 'OTP sent to email',
