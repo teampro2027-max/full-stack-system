@@ -5,17 +5,17 @@ const nodemailer = require('nodemailer');
  */
 const sendOTP = async (email, otp) => {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      throw new Error('SMTP credentials are missing in .env file');
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error('SendGrid API Key is missing in .env file');
     }
 
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465, // Si degdeg ah ayuu ugu dirayaa port-gan
-      secure: true, // Wuxuu isticmaalayaa SSL toos ah
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      secure: false, // SendGrid port 587 uses STARTTLS
       auth: {
-        user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS,
+        user: 'apikey', // SendGrid user is always literally 'apikey'
+        pass: process.env.SENDGRID_API_KEY,
       },
       connectionTimeout: 20000,
       greetingTimeout: 20000,
@@ -23,7 +23,7 @@ const sendOTP = async (email, otp) => {
     });
 
     const mailOptions = {
-      from: `"BillTrack Pro" <${process.env.EMAIL_USER}>`,
+      from: `"BillTrack Pro" <${process.env.SENDER_EMAIL}>`,
       to: email,
       subject: 'Xaqiijinta Koontada (OTP Code)',
       html: `
@@ -53,21 +53,23 @@ const sendOTP = async (email, otp) => {
  */
 const sendBillReminderEmail = async (email, userName, billTitle, amount) => {
   try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.warn('SMTP credentials missing, skipping bill reminder email');
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn('SendGrid API Key missing, skipping bill reminder email');
       return false;
     }
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      secure: false,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: 'apikey',
+        pass: process.env.SENDGRID_API_KEY,
       },
     });
 
     const mailOptions = {
-      from: `"BillTrack Pro" <${process.env.EMAIL_USER}>`,
+      from: `"BillTrack Pro" <${process.env.SENDER_EMAIL}>`,
       to: email,
       subject: `Xasuusin: Biilkaaga "${billTitle}" waa diyaar`,
       html: `
