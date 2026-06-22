@@ -47,10 +47,25 @@ const getDashboardStats = async (req, res) => {
             { $limit: 7 }
         ]);
 
-        // Bill category breakdown
+        // Bill category breakdown (sorted by total amount descending)
         const categoryStats = await Bill.aggregate([
             { $group: { _id: '$category', count: { $sum: 1 }, total: { $sum: '$amount' } } },
-            { $sort: { count: -1 } }
+            { $sort: { total: -1 } }
+        ]);
+
+        // Monthly expenses from database (grouped by year, month, and category)
+        const monthlyExpenses = await Bill.aggregate([
+            {
+                $group: {
+                    _id: {
+                        year: { $year: '$createdAt' },
+                        month: { $month: '$createdAt' },
+                        category: '$category'
+                    },
+                    total: { $sum: '$amount' }
+                }
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
         ]);
 
         // Recent payments with user + bill info
@@ -83,6 +98,7 @@ const getDashboardStats = async (req, res) => {
             },
             monthlyRevenue,
             categoryStats,
+            monthlyExpenses,
             recentPayments,
             upcomingBills: upcoming,
         });
