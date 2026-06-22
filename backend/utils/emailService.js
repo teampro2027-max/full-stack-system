@@ -16,9 +16,9 @@ const sendOTP = async (email, otp) => {
         user: process.env.EMAIL_USER, 
         pass: process.env.EMAIL_PASS, // Isticmaal "App Password" ee Gmail-ka
       },
-      connectionTimeout: 5000, // 5 seconds connection timeout
-      greetingTimeout: 5000,   // 5 seconds greeting timeout
-      socketTimeout: 5000,     // 5 seconds socket timeout
+      connectionTimeout: 20000, // 20 seconds connection timeout
+      greetingTimeout: 20000,   // 20 seconds greeting timeout
+      socketTimeout: 20000,     // 20 seconds socket timeout
     });
 
     const mailOptions = {
