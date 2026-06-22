@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { getDashboardStats } from '../services/api';
+import { exportToCSV } from '../utils/exportUtils';
 
 const CATEGORY_COLORS = {
   electricity: '#6366f1', water: '#3b82f6', internet: '#10b981',
@@ -92,6 +93,21 @@ const Dashboard = () => {
   const recentPayments = data?.recentPayments || [];
   const upcomingBills = data?.upcomingBills || [];
 
+  const handleExport = () => {
+    if (!data) return;
+    const exportData = [
+      { Metric: 'Total Users', Value: stats.users },
+      { Metric: 'Active Bills', Value: stats.activeBills },
+      { Metric: 'Payments (Month)', Value: `$${stats.monthlyPayments}` },
+      { Metric: 'Pending Amount', Value: `$${stats.pendingAmount}` },
+      ...recentPayments.map(p => ({
+        Metric: `Payment: ${p.transactionId || 'Unknown'}`,
+        Value: `$${p.amount} - ${p.status}`
+      }))
+    ];
+    exportToCSV('Dashboard_Summary', exportData);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -108,7 +124,7 @@ const Dashboard = () => {
             Refresh
           </button>
           <button className="btn-primary"><Plus size={15} />Quick Add</button>
-          <button className="btn-secondary"><Download size={15} />Export</button>
+          <button onClick={handleExport} className="btn-secondary"><Download size={15} />Export</button>
         </div>
       </div>
 

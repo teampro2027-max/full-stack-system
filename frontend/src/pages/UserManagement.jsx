@@ -6,6 +6,7 @@ import {
 import { useI18n } from '../context/I18nContext';
 import { getAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser } from '../services/api';
 import CustomDialog from '../components/CustomDialog';
+import { exportToCSV } from '../utils/exportUtils';
 
 const statusBadge = { active: 'badge-success', inactive: 'badge-warning', suspended: 'badge-danger' };
 const avatarColors = ['gradient-brand', 'gradient-success', 'gradient-warning', 'gradient-danger'];
@@ -113,6 +114,19 @@ const UserManagement = () => {
     setOpenMenu(null);
   };
 
+  const handleExport = () => {
+    const dataToExport = users.map(u => ({
+      Name: u.name,
+      Phone: u.phone || '',
+      Email: u.email || '',
+      Status: u.status || 'active',
+      BillCount: u.billCount || 0,
+      MFA: u.mfaEnabled ? 'Yes' : 'No',
+      JoinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''
+    }));
+    exportToCSV('Users_Export', dataToExport);
+  };
+
   const initials = (name) => (name || '?').split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
@@ -125,7 +139,7 @@ const UserManagement = () => {
         </div>
         <div className="flex gap-2">
           <button onClick={fetchUsers} className="btn-secondary"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /></button>
-          <button className="btn-secondary"><Download size={15} />{t('export')}</button>
+          <button onClick={handleExport} className="btn-secondary"><Download size={15} />{t('export')}</button>
           <button className="btn-primary" onClick={openAdd}><Plus size={15} />{t('addUser')}</button>
         </div>
       </div>

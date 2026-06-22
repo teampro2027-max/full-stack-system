@@ -3,6 +3,7 @@ import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { TrendingUp, DollarSign, Users, FileText, Download, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { getDashboardStats } from '../services/api';
+import { exportToCSV } from '../utils/exportUtils';
 
 const CATEGORY_COLORS = {
   electricity: '#6366f1', water: '#3b82f6', internet: '#10b981',
@@ -55,6 +56,21 @@ const ReportsAnalytics = () => {
   const totalRevenue = data?.monthlyRevenue?.reduce((acc, m) => acc + m.revenue, 0) || 0;
   const avgMonthly = monthlyData.length ? Math.round(totalRevenue / monthlyData.length) : 0;
 
+  const handleExport = () => {
+    if (!data) return;
+    const exportData = [
+      { Metric: 'Total Revenue', Value: `$${totalRevenue}` },
+      { Metric: 'Avg Monthly', Value: `$${avgMonthly}` },
+      { Metric: 'Total Users', Value: stats?.totalUsers || 0 },
+      { Metric: 'Total Bills', Value: (stats?.activeBills + stats?.paidBills) || 0 },
+      ...monthlyData.map(m => ({
+        Metric: `Month: ${m.month}`,
+        Value: `Revenue: $${m.revenue}, Bills: ${m.bills}`
+      }))
+    ];
+    exportToCSV('Reports_Analytics', exportData);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -66,7 +82,7 @@ const ReportsAnalytics = () => {
           <button onClick={fetchStats} className="btn-secondary">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button className="btn-primary"><Download size={15}/>Export PDF</button>
+          <button onClick={handleExport} className="btn-primary"><Download size={15}/>Export CSV</button>
         </div>
       </div>
 
