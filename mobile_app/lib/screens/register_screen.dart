@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'dart:async';
+import '../services/notification_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -112,11 +114,15 @@ class _RegisterScreenState extends State<RegisterScreen>
       // Log for debugging: Hubi in email-ka uu sax yahay ka hor intaan la dirin
       debugPrint('Attempting registration for: $email');
 
+      // Qaado token-ka moobilka si backend-ku Push Notification kuugu soo diro
+      String? fcmToken = await NotificationService.getToken();
+
       final res = await authProvider.register(
         _nameController.text.trim(),
         email,
         _passwordController.text,
         '252${_normalizePhone(_phoneController.text)}',
+        fcmToken: fcmToken,
       );
 
       if (!mounted) return;
@@ -156,186 +162,10 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   void _showOtpDialog(String email) {
-    final otpController = TextEditingController();
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) {
-        bool verifying = false;
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4F46E5).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.mark_email_read_outlined,
-                      color: Color(0xFF4F46E5),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Verify Email',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF6B7280),
-                      ),
-                      children: [
-                        const TextSpan(
-                          text: 'A 6-digit verification code was sent to ',
-                        ),
-                        TextSpan(
-                          text: email,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4F46E5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: otpController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(6),
-                    ],
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 10,
-                      color: Color(0xFF111827),
-                    ),
-                    decoration: InputDecoration(
-                      hintText: '------',
-                      hintStyle: const TextStyle(
-                        letterSpacing: 10,
-                        color: Color(0xFFD1D5DB),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF9FAFB),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF4F46E5),
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: verifying ? null : () => Navigator.of(ctx).pop(),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: Color(0xFF9CA3AF)),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4F46E5),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 10,
-                    ),
-                  ),
-                  onPressed: verifying
-                      ? null
-                      : () async {
-                          if (otpController.text.trim().length != 6) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please enter the 6-digit OTP code',
-                                ),
-                                backgroundColor: Color(0xFFEF4444),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            return;
-                          }
-                          setDialogState(() => verifying = true);
-                          // Capture navigators before any await (avoids BuildContext async gap lint)
-                          final dialogNav = Navigator.of(ctx);
-                          final rootNav = Navigator.of(context);
-                          try {
-                            await Provider.of<AuthProvider>(
-                              dialogContext,
-                              listen: false,
-                            ).verifyRegisterOtp(
-                              email,
-                              otpController.text.trim(),
-                            );
-                            dialogNav.pop();
-                            rootNav.pushReplacementNamed('/dashboard');
-                          } catch (e) {
-                            setDialogState(() => verifying = false);
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  e.toString().replaceFirst('Exception: ', ''),
-                                ),
-                                backgroundColor: const Color(0xFFEF4444),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
-                        },
-                  child: verifying
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Verify & Continue',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (ctx) => OtpDialog(email: email),
     );
   }
 
@@ -703,6 +533,192 @@ class _RegisterScreenState extends State<RegisterScreen>
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: focusColor, width: 2)),
       errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red)),
       focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 2)),
+    );
+  }
+}
+
+class OtpDialog extends StatefulWidget {
+  final String email;
+  const OtpDialog({super.key, required this.email});
+
+  @override
+  State<OtpDialog> createState() => _OtpDialogState();
+}
+
+class _OtpDialogState extends State<OtpDialog> {
+  final _otpController = TextEditingController();
+  bool _verifying = false;
+  int _timeLeft = 120;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timeLeft = 120;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_timeLeft > 0) {
+        setState(() => _timeLeft--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _resendOtp() async {
+    try {
+      setState(() => _verifying = true);
+      String? fcmToken = await NotificationService.getToken();
+      if (!mounted) return;
+      await Provider.of<AuthProvider>(context, listen: false).resendRegisterOtp(widget.email, fcmToken: fcmToken);
+      _startTimer();
+      setState(() => _verifying = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A new OTP has been sent!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      setState(() => _verifying = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    if (_otpController.text.trim().length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter the 6-digit OTP code'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    setState(() => _verifying = true);
+    final dialogNav = Navigator.of(context);
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    try {
+      await Provider.of<AuthProvider>(context, listen: false).verifyRegisterOtp(widget.email, _otpController.text.trim());
+      dialogNav.pop();
+      rootNav.pushReplacementNamed('/dashboard');
+    } catch (e) {
+      setState(() => _verifying = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    int minutes = _timeLeft ~/ 60;
+    int seconds = _timeLeft % 60;
+    String timerText = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4F46E5).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.mark_email_read_outlined, color: Color(0xFF4F46E5), size: 22),
+          ),
+          const SizedBox(width: 10),
+          const Text('Verify Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              children: [
+                const TextSpan(text: 'A 6-digit verification code was sent to\n'),
+                TextSpan(text: widget.email, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _otpController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 10, color: Color(0xFF111827)),
+            decoration: InputDecoration(
+              hintText: '------',
+              hintStyle: const TextStyle(letterSpacing: 10, color: Color(0xFFD1D5DB)),
+              filled: true,
+              fillColor: const Color(0xFFF9FAFB),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2)),
+            ),
+          ),
+          const SizedBox(height: 15),
+          if (_timeLeft > 0)
+            Text('Code expires in: $timerText', style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold))
+          else
+            TextButton(
+              onPressed: _verifying ? null : _resendOtp,
+              child: const Text('Try Again / Resend OTP', style: TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.bold)),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _verifying ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel', style: TextStyle(color: Color(0xFF9CA3AF))),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF4F46E5),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+          ),
+          onPressed: _verifying ? null : _verifyOtp,
+          child: _verifying ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Verify'),
+        ),
+      ],
     );
   }
 }

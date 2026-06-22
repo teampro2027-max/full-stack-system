@@ -58,8 +58,9 @@ class AuthProvider with ChangeNotifier {
     String name,
     String email,
     String password,
-    String phone,
-  ) async {
+    String phone, {
+    String? fcmToken,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
@@ -72,6 +73,7 @@ class AuthProvider with ChangeNotifier {
           'email': email,
           'password': password,
           'phone': phone,
+          if (fcmToken != null) 'fcmToken': fcmToken,
         }),
       );
 
@@ -138,6 +140,34 @@ class AuthProvider with ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> resendRegisterOtp(String email, {String? fcmToken}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/resend-register-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          if (fcmToken != null) 'fcmToken': fcmToken,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      _isLoading = false;
+      notifyListeners();
+
+      if (response.statusCode != 200) {
+        throw Exception(data['message'] ?? 'Failed to resend OTP');
+      }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> forgotPassword(String email) async {

@@ -81,7 +81,12 @@ class NotificationService {
   }
 
   static Future<String?> getToken() async {
-    return await _fcm.getToken();
+    try {
+      return await _fcm.getToken();
+    } catch (e) {
+      if (kDebugMode) print("FCM getToken error (likely Web without Firebase config): $e");
+      return null;
+    }
   }
 
   static Future<void> updateTokenOnServer() async {

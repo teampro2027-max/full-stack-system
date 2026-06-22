@@ -4,6 +4,7 @@ const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sendOTP, sendResetOTP } = require('../utils/emailService');
+const admin = require('../config/firebase');
 const {
     normalizePhoneNumber,
     isValidWaafiPhoneNumber
@@ -14,7 +15,7 @@ const generateToken = (id) => {
 };
 
 const registerUser = async (req, res) => {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, fcmToken } = req.body;
     try {
         if (!name || !email || !password || !phone) {
             return res.status(400).json({ message: 'Name, email, password, and phone number are required' });
@@ -92,6 +93,20 @@ const registerUser = async (req, res) => {
         }).catch(err => {
             console.error('Background OTP email error:', err);
         });
+
+        // HADDII uu jiro fcmToken, isla markiiba Push Notification ahaan ugu dir OTP-ga moobilka!
+        if (fcmToken && admin) {
+            const message = {
+                notification: { 
+                    title: 'Xaqiijinta Koontada (OTP)', 
+                    body: `Koodkaaga xaqiijintu waa: ${otp}. Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.` 
+                },
+                token: fcmToken
+            };
+            admin.messaging().send(message)
+                .then(() => console.log(`✅ OTP Push Notification sent directly to device.`))
+                .catch(err => console.error('⚠️ Failed to send OTP Push Notification:', err));
+        }
 
         // Isla markiiba jawaab u cel Mobile App-ka — ha sugin email-ka
         res.status(200).json({
@@ -279,6 +294,50 @@ const resetPassword = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+const resendRegisterOtp = async (req, res) => {
+    const { email, fcmToken } = req.body;
+    try {
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+        
+        const user = await User.findOne({ email: normalizedEmail, status: 'inactive' });
+        if (!user) {
+            return res.status(400).json({ message: 'No pending registration found for this email' });
+        }
 
-module.exports = { registerUser, verifyRegisterOtp, loginUser, forgotPassword, resetPassword };
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+        user.otp = otp;
+        user.otpExpiry = otpExpiry;
+        await user.save();
+
+        sendOTP(normalizedEmail, otp).catch(err => console.error('Background OTP email error:', err));
+
+        if (fcmToken && admin) {
+            const message = {
+                notification: { 
+                    title: 'Xaqiijinta Koontada (OTP)', 
+                    body: `Koodkaaga cusub waa: ${otp}. Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.` 
+                },
+                token: fcmToken
+            };
+            admin.messaging().send(message).catch(err => console.error('⚠️ Failed to send OTP Push Notification:', err));
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'OTP resent successfully',
+            requiresOtp: true,
+            email: normalizedEmail
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { registerUser, verifyRegisterOtp, loginUser, forgotPassword, resetPassword, resendRegisterOtp };
 

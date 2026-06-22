@@ -5,25 +5,20 @@ const nodemailer = require('nodemailer');
  */
 const sendOTP = async (email, otp) => {
   try {
-    if (!process.env.SENDGRID_API_KEY) {
-      throw new Error('SendGrid API Key is missing in .env file');
+    if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+      throw new Error('SMTP credentials missing in .env file');
     }
 
     const transporter = nodemailer.createTransport({
-      host: 'smtp.sendgrid.net',
-      port: 587,
-      secure: false, // SendGrid port 587 uses STARTTLS
+      service: 'gmail',
       auth: {
-        user: 'apikey', // SendGrid user is always literally 'apikey'
-        pass: process.env.SENDGRID_API_KEY,
+        user: process.env.SMTP_EMAIL,
+        pass: process.env.SMTP_PASSWORD,
       },
-      connectionTimeout: 20000,
-      greetingTimeout: 20000,
-      socketTimeout: 20000,
     });
 
     const mailOptions = {
-      from: `"BillTrack Pro" <${process.env.SENDER_EMAIL}>`,
+      from: `"BillTrack Pro" <${process.env.SMTP_EMAIL}>`,
       to: email,
       subject: 'Xaqiijinta Koontada (OTP Code)',
       html: `
@@ -53,23 +48,21 @@ const sendOTP = async (email, otp) => {
  */
 const sendBillReminderEmail = async (email, userName, billTitle, amount) => {
   try {
-    if (!process.env.SENDGRID_API_KEY) {
-      console.warn('SendGrid API Key missing, skipping bill reminder email');
+    if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+      console.warn('SMTP credentials missing, skipping bill reminder email');
       return false;
     }
 
     const transporter = nodemailer.createTransport({
-      host: 'smtp.sendgrid.net',
-      port: 587,
-      secure: false,
+      service: 'gmail',
       auth: {
-        user: 'apikey',
-        pass: process.env.SENDGRID_API_KEY,
+        user: process.env.SMTP_EMAIL,
+        pass: process.env.SMTP_PASSWORD,
       },
     });
 
     const mailOptions = {
-      from: `"BillTrack Pro" <${process.env.SENDER_EMAIL}>`,
+      from: `"BillTrack Pro" <${process.env.SMTP_EMAIL}>`,
       to: email,
       subject: `Xasuusin: Biilkaaga "${billTitle}" waa diyaar`,
       html: `
@@ -97,25 +90,20 @@ const sendBillReminderEmail = async (email, userName, billTitle, amount) => {
 
 const sendResetOTP = async (email, otp) => {
   try {
-    if (!process.env.SENDGRID_API_KEY) {
-      throw new Error('SendGrid API Key is missing in .env file');
+    if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+      throw new Error('SMTP credentials missing in .env file');
     }
 
     const transporter = nodemailer.createTransport({
-      host: 'smtp.sendgrid.net',
-      port: 587,
-      secure: false,
+      service: 'gmail',
       auth: {
-        user: 'apikey',
-        pass: process.env.SENDGRID_API_KEY,
+        user: process.env.SMTP_EMAIL,
+        pass: process.env.SMTP_PASSWORD,
       },
-      connectionTimeout: 20000,
-      greetingTimeout: 20000,
-      socketTimeout: 20000,
     });
 
     const mailOptions = {
-      from: `"BillTrack Pro" <${process.env.SENDER_EMAIL}>`,
+      from: `"BillTrack Pro" <${process.env.SMTP_EMAIL}>`,
       to: email,
       subject: 'Koodka Dib-u-dejinta Password-ka (OTP Code)',
       html: `
