@@ -113,9 +113,6 @@ const ReminderManagement = () => {
                 <span className="badge badge-purple">{tpl.lang}</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">{tpl.msg}</p>
-              <div className="flex gap-2 mt-3">
-                <button className="btn-secondary text-xs"><Edit size={11}/>Edit</button>
-              </div>
             </div>
           ))}
         </div>
