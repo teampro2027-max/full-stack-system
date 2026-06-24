@@ -31,6 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (res != null && res['requiresOtp'] == true) {
         final isFallbackOtp = res['emailDelivery'] == 'fallback';
+        
+        // Show initial status message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -45,19 +47,79 @@ class _LoginScreenState extends State<LoginScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+        
+        // Show OTP code in prominent snack bar with copy button
         if (res['debugOtp'] != null) {
+          final otpCode = res['debugOtp'].toString();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'OTP Code: ${res['debugOtp']} (copy and enter below)',
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Koodkaaga Xaqiijinta (OTP Code):',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.4),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      otpCode,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 4,
+                        color: Colors.white,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Koodkan wuxuu dhacayaa 10 daqiiqo ka dib',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white70,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ),
               backgroundColor: const Color(0xFF5B21B6),
-              duration: const Duration(seconds: 15),
+              duration: const Duration(seconds: 20),
               behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               action: SnackBarAction(
-                label: 'Dismiss',
+                label: 'Copy',
                 textColor: Colors.white,
-                onPressed: () {},
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: otpCode));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Koodka waa la nuqlay! ✓'),
+                      backgroundColor: Color(0xFF10B981),
+                      duration: Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
               ),
             ),
           );
