@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -8,7 +8,7 @@ import {
   Clock, Bell, Activity, ArrowUpRight, Plus, Download, RefreshCw,
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
-import { getDashboardStats } from '../services/api';
+import { API_BASE_URL, getDashboardStats } from '../services/api';
 import { exportToCSV } from '../utils/exportUtils';
 
 const CATEGORY_COLORS = {
@@ -20,7 +20,7 @@ const CATEGORY_COLORS = {
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ── Stat Card ─────────────────────────────────────────────
+// â”€â”€ Stat Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const StatCard = ({ title, value, change, icon: Icon, gradient, loading }) => (
   <div className="stat-card group cursor-default">
     <div>
@@ -54,7 +54,13 @@ const Dashboard = () => {
       const res = await getDashboardStats();
       setData(res.data);
     } catch (e) {
-      setError(e.response?.data?.message || 'Failed to load dashboard data');
+      if (!e.response) {
+        setError(`Failed to load dashboard data. Backend is not reachable at ${API_BASE_URL}.`);
+      } else if (e.response.status === 401) {
+        setError('Admin session expired or token is missing. Please sign in again.');
+      } else {
+        setError(e.response?.data?.message || 'Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
     }
@@ -65,14 +71,14 @@ const Dashboard = () => {
   const stats = data?.stats;
 
   const statCards = [
-    { title: t('totalUsers'), value: stats?.totalUsers ?? '—', icon: Users, gradient: 'gradient-brand' },
-    { title: t('activeBills'), value: stats?.activeBills ?? '—', icon: FileText, gradient: 'gradient-brand' },
-    { title: t('paidBills'), value: stats?.paidBills ?? '—', icon: CheckCircle, gradient: 'gradient-success' },
-    { title: t('overdueBills'), value: stats?.overdueBills ?? '—', icon: AlertTriangle, gradient: 'gradient-warning' },
-    { title: t('monthlyRevenue'), value: stats ? `$${stats.monthlyRevenue?.toLocaleString()}` : '—', icon: DollarSign, gradient: 'gradient-success' },
-    { title: t('pendingPayments'), value: stats?.pendingBills ?? '—', icon: Clock, gradient: 'gradient-warning' },
-    { title: 'Monthly Transactions', value: stats?.monthlyTransactions ?? '—', icon: Activity, gradient: 'gradient-brand' },
-    { title: t('upcomingReminders'), value: data?.upcomingBills?.length ?? '—', icon: Bell, gradient: 'gradient-danger' },
+    { title: t('totalUsers'), value: stats?.totalUsers ?? 'â€”', icon: Users, gradient: 'gradient-brand' },
+    { title: t('activeBills'), value: stats?.activeBills ?? 'â€”', icon: FileText, gradient: 'gradient-brand' },
+    { title: t('paidBills'), value: stats?.paidBills ?? 'â€”', icon: CheckCircle, gradient: 'gradient-success' },
+    { title: t('overdueBills'), value: stats?.overdueBills ?? 'â€”', icon: AlertTriangle, gradient: 'gradient-warning' },
+    { title: t('monthlyRevenue'), value: stats ? `$${stats.monthlyRevenue?.toLocaleString()}` : 'â€”', icon: DollarSign, gradient: 'gradient-success' },
+    { title: t('pendingPayments'), value: stats?.pendingBills ?? 'â€”', icon: Clock, gradient: 'gradient-warning' },
+    { title: 'Monthly Transactions', value: stats?.monthlyTransactions ?? 'â€”', icon: Activity, gradient: 'gradient-brand' },
+    { title: t('upcomingReminders'), value: data?.upcomingBills?.length ?? 'â€”', icon: Bell, gradient: 'gradient-danger' },
   ];
 
   // Transform monthly revenue for chart
@@ -131,7 +137,7 @@ const Dashboard = () => {
       {error && (
         <div className="card border-red-200 bg-red-50 dark:bg-red-900/20 text-red-600 text-sm flex items-center gap-2">
           <AlertTriangle size={16} />
-          {error} — Make sure the backend server is running on port 5000.
+          {error}
         </div>
       )}
 
@@ -257,14 +263,14 @@ const Dashboard = () => {
           {loading ? (
             <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />)}</div>
           ) : upcomingBills.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-8">No upcoming bills in the next 7 days 🎉</p>
+            <p className="text-slate-400 text-sm text-center py-8">No upcoming bills in the next 7 days ðŸŽ‰</p>
           ) : (
             <div className="space-y-2">
               {upcomingBills.map((b) => (
                 <div key={b._id} className="flex items-center justify-between p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800">
                   <div>
                     <p className="text-sm font-medium">{b.userId?.name || 'Unknown'}</p>
-                    <p className="text-xs text-slate-400 capitalize">{b.category?.replace(/_/g, ' ')} • Due {new Date(b.dueDate).toLocaleDateString()}</p>
+                    <p className="text-xs text-slate-400 capitalize">{b.category?.replace(/_/g, ' ')} â€¢ Due {new Date(b.dueDate).toLocaleDateString()}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-amber-600">${b.amount}</span>
@@ -281,3 +287,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

@@ -1,4 +1,4 @@
-const User = require('../models/User');
+﻿const User = require('../models/User');
 const OTP = require('../models/OTP');
 const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcryptjs');
@@ -13,6 +13,16 @@ const {
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
+
+const shouldExposeOtp = () => process.env.OFFLINE_MODE === 'true' || process.env.SHOW_DEBUG_OTP === 'true';
+
+const otpResponse = (payload, otp) => {
+    const response = { ...payload };
+    if (shouldExposeOtp()) response.debugOtp = otp;
+    return response;
+};
+
+const otpEmailFailureMessage = 'Failed to send OTP email. Please check Gmail SMTP credentials and try again.';
 
 const registerUser = async (req, res) => {
     const { name, email, password, phone, fcmToken } = req.body;
@@ -84,20 +94,10 @@ const registerUser = async (req, res) => {
                 otpExpiry
             });
         }
-
-        // OTP-ga email-ka gadaashiisa u dir (background) si Mobile App-ku degdeg ugu helo jawaab
-        // Taasi waxay ka hortagtaa "connection abort" error-ka
-        sendOTP(normalizedEmail, otp).then(sent => {
-            if (!sent) {
-                console.warn(`\n==================================================`);
-                console.warn(`⚠️ SendGrid failed to send OTP email to ${normalizedEmail}.`);
-                console.warn(`==================================================\n`);
-            } else {
-                console.log(`✅ OTP email sent successfully to ${normalizedEmail}`);
-            }
-        }).catch(err => {
-            console.error('Background OTP email error:', err);
-        });
+        const emailSent = await sendOTP(normalizedEmail, otp);
+        if (!emailSent) {
+            return res.status(502).json({ success: false, message: otpEmailFailureMessage });
+        }
 
         // HADDII uu jiro fcmToken, isla markiiba Push Notification ahaan ugu dir OTP-ga moobilka!
         if (fcmToken && admin) {
@@ -109,18 +109,16 @@ const registerUser = async (req, res) => {
                 token: fcmToken
             };
             admin.messaging().send(message)
-                .then(() => console.log(`✅ OTP Push Notification sent directly to device.`))
-                .catch(err => console.error('⚠️ Failed to send OTP Push Notification:', err));
+                .then(() => console.log(`âœ… OTP Push Notification sent directly to device.`))
+                .catch(err => console.error('âš ï¸ Failed to send OTP Push Notification:', err));
         }
-
-        // Isla markiiba jawaab u cel Mobile App-ka — ha sugin email-ka
-        res.status(200).json({
+        // Email-ka waa la xaqiijiyay in la diray ka hor inta aan response la celin.
+        res.status(200).json(otpResponse({
             success: true,
-            message: 'OTP sent to email',
+            message: 'OTP sent to Gmail',
             requiresOtp: true,
-            email: normalizedEmail,
-            debugOtp: otp
-        });
+            email: normalizedEmail
+        }, otp));
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -211,17 +209,10 @@ const loginUser = async (req, res) => {
         user.otp = otp;
         user.otpExpiry = otpExpiry;
         await user.save();
-
-        // Send OTP to email in the background
-        sendOTP(normalizedEmail, otp).then(sent => {
-            if (!sent) {
-                console.warn(`⚠️ SendGrid failed to send login OTP email to ${normalizedEmail}.`);
-            } else {
-                console.log(`✅ Login OTP email sent successfully to ${normalizedEmail}`);
-            }
-        }).catch(err => {
-            console.error('Background login OTP email error:', err);
-        });
+        const emailSent = await sendOTP(normalizedEmail, otp);
+        if (!emailSent) {
+            return res.status(502).json({ success: false, message: otpEmailFailureMessage });
+        }
 
         // Send OTP Push Notification if fcmToken is available
         if (fcmToken && admin) {
@@ -233,17 +224,16 @@ const loginUser = async (req, res) => {
                 token: fcmToken
             };
             admin.messaging().send(message)
-                .then(() => console.log(`✅ Login OTP Push Notification sent directly to device.`))
-                .catch(err => console.error('⚠️ Failed to send Login OTP Push Notification:', err));
+                .then(() => console.log(`âœ… Login OTP Push Notification sent directly to device.`))
+                .catch(err => console.error('âš ï¸ Failed to send Login OTP Push Notification:', err));
         }
 
-        res.status(200).json({
+        res.status(200).json(otpResponse({
             success: true,
-            message: 'OTP sent to email',
+            message: 'OTP sent to Gmail',
             requiresOtp: true,
-            email: normalizedEmail,
-            debugOtp: otp
-        });
+            email: normalizedEmail
+        }, otp));
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -312,7 +302,10 @@ const resendLoginOtp = async (req, res) => {
         user.otpExpiry = otpExpiry;
         await user.save();
 
-        sendOTP(normalizedEmail, otp).catch(err => console.error('Background OTP email error:', err));
+        const emailSent = await sendOTP(normalizedEmail, otp);
+        if (!emailSent) {
+            return res.status(502).json({ success: false, message: otpEmailFailureMessage });
+        }
 
         if (fcmToken && admin) {
             const message = {
@@ -322,16 +315,15 @@ const resendLoginOtp = async (req, res) => {
                 },
                 token: fcmToken
             };
-            admin.messaging().send(message).catch(err => console.error('⚠️ Failed to send Login OTP Push Notification:', err));
+            admin.messaging().send(message).catch(err => console.error('âš ï¸ Failed to send Login OTP Push Notification:', err));
         }
 
-        res.status(200).json({
+        res.status(200).json(otpResponse({
             success: true,
             message: 'OTP resent successfully',
             requiresOtp: true,
-            email: normalizedEmail,
-            debugOtp: otp
-        });
+            email: normalizedEmail
+        }, otp));
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -373,12 +365,11 @@ const forgotPassword = async (req, res) => {
             });
         }
 
-        res.status(200).json({
+        res.status(200).json(otpResponse({
             success: true,
-            message: 'Password reset OTP sent to email',
-            email: normalizedEmail,
-            debugOtp: otp
-        });
+            message: 'Password reset OTP sent to Gmail',
+            email: normalizedEmail
+        }, otp));
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -456,7 +447,10 @@ const resendRegisterOtp = async (req, res) => {
         user.otpExpiry = otpExpiry;
         await user.save();
 
-        sendOTP(normalizedEmail, otp).catch(err => console.error('Background OTP email error:', err));
+        const emailSent = await sendOTP(normalizedEmail, otp);
+        if (!emailSent) {
+            return res.status(502).json({ success: false, message: otpEmailFailureMessage });
+        }
 
         if (fcmToken && admin) {
             const message = {
@@ -466,16 +460,15 @@ const resendRegisterOtp = async (req, res) => {
                 },
                 token: fcmToken
             };
-            admin.messaging().send(message).catch(err => console.error('⚠️ Failed to send OTP Push Notification:', err));
+            admin.messaging().send(message).catch(err => console.error('âš ï¸ Failed to send OTP Push Notification:', err));
         }
 
-        res.status(200).json({
+        res.status(200).json(otpResponse({
             success: true,
             message: 'OTP resent successfully',
             requiresOtp: true,
-            email: normalizedEmail,
-            debugOtp: otp
-        });
+            email: normalizedEmail
+        }, otp));
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -483,4 +476,7 @@ const resendRegisterOtp = async (req, res) => {
 };
 
 module.exports = { registerUser, verifyRegisterOtp, loginUser, forgotPassword, resetPassword, resendRegisterOtp, verifyLoginOtp, resendLoginOtp };
+
+
+
 

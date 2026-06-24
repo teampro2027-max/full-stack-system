@@ -1,60 +1,91 @@
-const nodemailer = require('nodemailer');
+﻿const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
-// Create transporter: prefer real SMTP, fall back to Ethereal for dev, or null in prod without SMTP
+const isOfflineMode = () => process.env.OFFLINE_MODE === 'true';
+
+const smtpTimeout = () => Number(process.env.SMTP_TIMEOUT_MS || 15000);
+
 const _createTransporter = async () => {
-  if (process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.SMTP_EMAIL, pass: process.env.SMTP_PASSWORD },
-    });
+  if (isOfflineMode()) {
+    return null;
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      return nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        auth: { user: testAccount.user, pass: testAccount.pass },
-      });
-    } catch (err) {
-      console.warn('Failed to create Ethereal account, emails will be logged.', err);
-      return null;
-    }
+  if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+    return null;
   }
 
-  return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE !== 'false' : true,
+    auth: {
+      user: process.env.SMTP_EMAIL,
+      pass: process.env.SMTP_PASSWORD,
+    },
+    connectionTimeout: smtpTimeout(),
+    greetingTimeout: smtpTimeout(),
+    socketTimeout: smtpTimeout(),
+  });
+};
+
+const logOfflineOTP = (email, otp, type) => {
+  const logFile = path.join(__dirname, '..', 'offline_otps.txt');
+  const timestamp = new Date().toISOString();
+  const entry = `[${timestamp}] TYPE: ${type} | EMAIL: ${email} | OTP CODE: ${otp}\n`;
+
+  try {
+    fs.appendFileSync(logFile, entry, 'utf8');
+    console.log('\n================================================================');
+    console.log('[OFFLINE OTP MOCK]');
+    console.log('----------------------------------------------------------------');
+    console.log(`Target Email : ${email}`);
+    console.log(`OTP Code     : ${otp}`);
+    console.log(`Email Type   : ${type}`);
+    console.log('Logged to    : backend/offline_otps.txt');
+    console.log('================================================================\n');
+  } catch (err) {
+    console.error('Failed to write offline OTP to file:', err);
+  }
 };
 
 const sendEmail = async ({ to, subject, text, html, fromName } = {}) => {
   try {
-    const transporter = await _createTransporter();
     const from = `${process.env.FROM_NAME || fromName || 'BillTrack Pro'} <${process.env.FROM_EMAIL || process.env.SMTP_EMAIL || 'no-reply@example.com'}>`;
 
+    if (isOfflineMode()) {
+      console.log('\n================================================================');
+      console.log('[OFFLINE EMAIL MOCK]');
+      console.log('----------------------------------------------------------------');
+      console.log(`From    : ${from}`);
+      console.log(`To      : ${to}`);
+      console.log(`Subject : ${subject}`);
+      console.log(`Text    : ${text || '(HTML Content Sent)'}`);
+      console.log('================================================================\n');
+      return true;
+    }
+
+    const transporter = await _createTransporter();
+
     if (!transporter) {
-      console.warn('No SMTP transporter available; logging email instead.');
-      console.log('--- EMAIL LOG START ---');
-      console.log('To:', to);
-      console.log('From:', from);
-      console.log('Subject:', subject);
-      console.log('Text:', text);
-      if (html) console.log('HTML:', html);
-      console.log('--- EMAIL LOG END ---');
+      console.error('Email send failed: SMTP_EMAIL and SMTP_PASSWORD are required when OFFLINE_MODE is false.');
       return false;
     }
 
     const info = await transporter.sendMail({ from, to, subject, text, html });
-    const preview = nodemailer.getTestMessageUrl(info);
-    if (preview) console.log('Preview URL:', preview);
-    console.log('Message sent:', info.messageId);
+    console.log(`Email sent to ${to}: ${info.messageId}`);
     return true;
   } catch (err) {
-    console.error('Email send failed:', err);
+    console.error('Email send failed:', err.message);
     return false;
   }
 };
 
 const sendOTP = async (email, otp) => {
+  if (isOfflineMode()) {
+    logOfflineOTP(email, otp, 'REGISTRATION_OR_LOGIN_OTP');
+  }
+
   const subject = 'BillTrack Pro: Koodka Xaqiijinta Koontada (Verification OTP)';
   const text = `Haye, koodkaaga xaqiijinta koontada BillTrack Pro waa: ${otp}. Koodhan wuxuu shaqaynayaa muddo 10 daqiiqo ah. Fadlan ha cidna la wadaagin koodkan. Mahadsanid, Kooxda BillTrack Pro.`;
   const html = `
@@ -99,6 +130,10 @@ const sendBillReminderEmail = async (email, userName, billTitle, amount) => {
 };
 
 const sendResetOTP = async (email, otp) => {
+  if (isOfflineMode()) {
+    logOfflineOTP(email, otp, 'PASSWORD_RESET_OTP');
+  }
+
   const subject = 'BillTrack Pro: Dib-u-dejinta Password-ka (Password Reset OTP)';
   const text = `Haye, koodkaaga dib-u-dejinta password-ka BillTrack Pro waa: ${otp}. Koodhan wuxuu shaqaynayaa muddo 10 daqiiqo ah. Fadlan ha cidna la wadaagin koodkan. Mahadsanid, Kooxda BillTrack Pro.`;
   const html = `

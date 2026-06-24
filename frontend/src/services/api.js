@@ -1,7 +1,23 @@
 import axios from 'axios';
 
+const normalizeBaseUrl = (url) => url.replace(/\/+$/, '');
+
+const getDefaultBaseUrl = () => {
+  if (typeof window === 'undefined') return 'http://127.0.0.1:5000/api';
+
+  const { protocol, hostname } = window.location;
+  if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://127.0.0.1:5000/api';
+  }
+
+  return `${protocol}//${hostname}:5000/api`;
+};
+
+export const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || getDefaultBaseUrl());
+
 const api = axios.create({
-  baseURL: 'https://full-stack-system-d4fn.onrender.com/api',
+  baseURL: API_BASE_URL,
+  timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
 

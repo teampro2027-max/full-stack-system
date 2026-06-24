@@ -86,11 +86,27 @@ const processWaafiPayment = async (req, res) => {
             invoiceId: payment.invoiceId,
             requestId: payment.requestId
         });
+        let providerResponse;
+        let responseBody;
+        let responseParams;
+        let isSuccess;
 
-        const providerResponse = await sendWaafiRequest(payload);
-        const responseBody = providerResponse.data || {};
-        const responseParams = responseBody.params || {};
-        const isSuccess = isWaafiSuccessResponse(providerResponse);
+        if (process.env.OFFLINE_MODE === 'true') {
+            console.log(`\n==================================================`);
+            console.log(`💳 [OFFLINE WAAFIPAY MOCK] Bypassing actual WaafiPay API request`);
+            console.log(`Amount: $${payment.amount} | Phone: ${normalizedPhone}`);
+            console.log(`==================================================\n`);
+            
+            providerResponse = { statusCode: 200, data: { responseCode: '2001', responseMsg: 'Success', params: { transactionId: 'TXN-MOCK-' + Math.random().toString(36).substring(2, 9) } } };
+            responseBody = providerResponse.data;
+            responseParams = responseBody.params;
+            isSuccess = true;
+        } else {
+            providerResponse = await sendWaafiRequest(payload);
+            responseBody = providerResponse.data || {};
+            responseParams = responseBody.params || {};
+            isSuccess = isWaafiSuccessResponse(providerResponse);
+        }
 
         // Update payment with real response data
         payment.providerResponse = responseBody;
