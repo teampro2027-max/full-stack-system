@@ -67,13 +67,14 @@ const httpPostJson = ({ hostname, path: requestPath, headers = {}, body }) =>
   });
 
 const sendWithResend = async ({ to, subject, text, html, from }) => {
-  if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is not configured.');
+  const apiKey = String(process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) throw new Error('RESEND_API_KEY is not configured.');
 
   const response = await httpPostJson({
     hostname: 'api.resend.com',
     path: '/emails',
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: {
       from,
@@ -93,7 +94,8 @@ const sendWithResend = async ({ to, subject, text, html, from }) => {
 };
 
 const sendWithBrevo = async ({ to, subject, text, html, from }) => {
-  if (!process.env.BREVO_API_KEY) throw new Error('BREVO_API_KEY is not configured.');
+  const apiKey = String(process.env.BREVO_API_KEY || '').trim();
+  if (!apiKey) throw new Error('BREVO_API_KEY is not configured.');
 
   const parsedFrom = parseFromAddress(from);
   const response = await httpPostJson({
@@ -120,7 +122,8 @@ const sendWithBrevo = async ({ to, subject, text, html, from }) => {
 };
 
 const sendWithSendGrid = async ({ to, subject, text, html, from }) => {
-  if (!process.env.SENDGRID_API_KEY) throw new Error('SENDGRID_API_KEY is not configured.');
+  const apiKey = String(process.env.SENDGRID_API_KEY || '').trim();
+  if (!apiKey) throw new Error('SENDGRID_API_KEY is not configured.');
 
   const parsedFrom = parseFromAddress(from);
   const content = [];
