@@ -134,11 +134,18 @@ class _RegisterScreenState extends State<RegisterScreen>
       // Haddii backend-ku uu email-ka diray, wuxuu soo celinayaa requiresOtp: true
       // Haddii kale, check-ga backend-ka logs-kiisa fiiri
       if (res != null && res['requiresOtp'] == true) {
+        final isFallbackOtp = res['emailDelivery'] == 'fallback';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('OTP-ga waa la dirayaa, fadlan hubi email-kaaga.'),
-            backgroundColor: Color(0xFF2563EB),
-            duration: Duration(seconds: 4),
+          SnackBar(
+            content: Text(
+              isFallbackOtp
+                  ? 'OTP-ga waa diyaar. Isticmaal code-ka muuqda.'
+                  : 'OTP-ga waa la diray, fadlan hubi email-kaaga.',
+            ),
+            backgroundColor: isFallbackOtp
+                ? const Color(0xFF4F46E5)
+                : const Color(0xFF2563EB),
+            duration: const Duration(seconds: 4),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -146,7 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Debug OTP: ${res['debugOtp']} (Copy and enter below)',
+                'OTP Code: ${res['debugOtp']} (copy and enter below)',
               ),
               backgroundColor: const Color(0xFF4F46E5),
               duration: const Duration(seconds: 15),
@@ -645,20 +652,35 @@ class _OtpDialogState extends State<OtpDialog> {
       setState(() => _verifying = true);
       String? fcmToken = await NotificationService.getToken();
       if (!mounted) return;
-      await Provider.of<AuthProvider>(
+      final res = await Provider.of<AuthProvider>(
         context,
         listen: false,
       ).resendRegisterOtp(widget.email, fcmToken: fcmToken);
       _startTimer();
       setState(() => _verifying = false);
       if (!mounted) return;
+      final isFallbackOtp = res?['emailDelivery'] == 'fallback';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A new OTP has been sent!'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: Text(
+            isFallbackOtp
+                ? 'OTP-ga waa diyaar. Isticmaal code-ka muuqda.'
+                : 'A new OTP has been sent!',
+          ),
+          backgroundColor: isFallbackOtp ? const Color(0xFF4F46E5) : Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
+      if (res?['debugOtp'] != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('OTP Code: ${res?['debugOtp']}'),
+            backgroundColor: const Color(0xFF4F46E5),
+            duration: const Duration(seconds: 15),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
       setState(() => _verifying = false);
       if (!mounted) return;

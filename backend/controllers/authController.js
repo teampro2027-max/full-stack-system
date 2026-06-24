@@ -14,15 +14,31 @@ const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
+const allowOtpFallback = () => process.env.ALLOW_OTP_FALLBACK !== 'false';
 const shouldExposeOtp = () => process.env.OFFLINE_MODE === 'true' || process.env.SHOW_DEBUG_OTP === 'true';
 
-const otpResponse = (payload, otp) => {
+const otpResponse = (payload, otp, { exposeOtp = false } = {}) => {
     const response = { ...payload };
-    if (shouldExposeOtp()) response.debugOtp = otp;
+    if (exposeOtp || shouldExposeOtp()) response.debugOtp = otp;
     return response;
 };
 
 const otpEmailFailureMessage = 'OTP email service is temporarily unavailable. Configure an HTTPS email provider (RESEND_API_KEY, BREVO_API_KEY, or SENDGRID_API_KEY) or working SMTP credentials on Render, then try again.';
+const otpEmailFallbackMessage = 'OTP email could not be delivered automatically. Use the verification code shown in the app, or configure an HTTPS email provider on Render for inbox delivery.';
+
+const handleOtpEmailFailure = (res, email, otp, message = otpEmailFallbackMessage) => {
+    if (!allowOtpFallback()) {
+        return res.status(503).json({ success: false, message: otpEmailFailureMessage });
+    }
+
+    return res.status(200).json(otpResponse({
+        success: true,
+        message,
+        requiresOtp: true,
+        email,
+        emailDelivery: 'fallback'
+    }, otp, { exposeOtp: true }));
+};
 
 const registerUser = async (req, res) => {
     const { name, email, password, phone, fcmToken } = req.body;
@@ -96,7 +112,7 @@ const registerUser = async (req, res) => {
         }
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(503).json({ success: false, message: otpEmailFailureMessage });
+            return handleOtpEmailFailure(res, normalizedEmail, otp);
         }
 
         // HADDII uu jiro fcmToken, isla markiiba Push Notification ahaan ugu dir OTP-ga moobilka!
@@ -117,7 +133,8 @@ const registerUser = async (req, res) => {
             success: true,
             message: 'OTP sent to Gmail',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            emailDelivery: 'sent'
         }, otp));
     } catch (error) {
         console.error(error);
@@ -211,7 +228,7 @@ const loginUser = async (req, res) => {
         await user.save();
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(503).json({ success: false, message: otpEmailFailureMessage });
+            return handleOtpEmailFailure(res, normalizedEmail, otp);
         }
 
         // Send OTP Push Notification if fcmToken is available
@@ -232,7 +249,8 @@ const loginUser = async (req, res) => {
             success: true,
             message: 'OTP sent to Gmail',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            emailDelivery: 'sent'
         }, otp));
     } catch (error) {
         console.error(error);
@@ -304,7 +322,7 @@ const resendLoginOtp = async (req, res) => {
 
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(503).json({ success: false, message: otpEmailFailureMessage });
+            return handleOtpEmailFailure(res, normalizedEmail, otp);
         }
 
         if (fcmToken && admin) {
@@ -322,7 +340,8 @@ const resendLoginOtp = async (req, res) => {
             success: true,
             message: 'OTP resent successfully',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            emailDelivery: 'sent'
         }, otp));
     } catch (error) {
         console.error(error);
@@ -355,20 +374,31 @@ const forgotPassword = async (req, res) => {
         // Send OTP to Gmail
         const emailSent = await sendResetOTP(normalizedEmail, otp);
         if (!emailSent) {
-            // Revert OTP if failed to send
+            if (allowOtpFallback()) {
+                return res.status(200).json(otpResponse({
+                    success: true,
+                    message: 'Password reset OTP email could not be delivered automatically. Use the verification code shown in the app.',
+                    email: normalizedEmail,
+                    emailDelivery: 'fallback'
+                }, otp, { exposeOtp: true }));
+            }
+
+            // Revert OTP if failed to send and fallback is disabled.
             user.otp = undefined;
             user.otpExpiry = undefined;
             await user.save();
 
-            return res.status(400).json({
-                message: 'Failed to send verification OTP email. Please make sure the Gmail address exists and is valid.'
+            return res.status(503).json({
+                success: false,
+                message: otpEmailFailureMessage
             });
         }
 
         res.status(200).json(otpResponse({
             success: true,
             message: 'Password reset OTP sent to Gmail',
-            email: normalizedEmail
+            email: normalizedEmail,
+            emailDelivery: 'sent'
         }, otp));
     } catch (error) {
         console.error(error);
@@ -449,7 +479,7 @@ const resendRegisterOtp = async (req, res) => {
 
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(503).json({ success: false, message: otpEmailFailureMessage });
+            return handleOtpEmailFailure(res, normalizedEmail, otp);
         }
 
         if (fcmToken && admin) {
@@ -467,7 +497,8 @@ const resendRegisterOtp = async (req, res) => {
             success: true,
             message: 'OTP resent successfully',
             requiresOtp: true,
-            email: normalizedEmail
+            email: normalizedEmail,
+            emailDelivery: 'sent'
         }, otp));
     } catch (error) {
         console.error(error);

@@ -183,7 +183,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> resendRegisterOtp(String email, {String? fcmToken}) async {
+  Future<Map<String, dynamic>?> resendRegisterOtp(String email, {String? fcmToken}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -204,6 +204,7 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode != 200) {
         throw Exception(data['message'] ?? 'Failed to resend OTP');
       }
+      return data;
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -245,7 +246,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> resendLoginOtp(String email, {String? fcmToken}) async {
+  Future<Map<String, dynamic>?> resendLoginOtp(String email, {String? fcmToken}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -266,6 +267,7 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode != 200) {
         throw Exception(data['message'] ?? 'Failed to resend OTP');
       }
+      return data;
     } catch (e) {
       _isLoading = false;
       notifyListeners();

@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'api_service.dart';
 
 class NotificationService {
-  static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  static FirebaseMessaging get _fcm => FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
+    if (kIsWeb) return;
+
     // 1. Request Permission
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
@@ -27,7 +29,7 @@ class NotificationService {
 
     await _localNotifications.initialize(settings: initSettings);
 
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
         'high_importance_channel',
         'High Importance Notifications',
@@ -81,6 +83,8 @@ class NotificationService {
   }
 
   static Future<String?> getToken() async {
+    if (kIsWeb) return null;
+
     try {
       return await _fcm.getToken();
     } catch (e) {
