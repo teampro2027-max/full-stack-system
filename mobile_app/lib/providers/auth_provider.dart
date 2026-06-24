@@ -8,9 +8,10 @@ import '../services/notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final _storage = const FlutterSecureStorage();
+  // Use Render deployment URL for online usage; fall back to localhost for local dev
   final String _baseUrl = kIsWeb
-      ? 'http://localhost:5000/api'
-      : 'http://10.0.2.2:5000/api';
+      ? 'https://full-stack-system-1ex6.onrender.com/api'
+      : 'https://full-stack-system-1ex6.onrender.com/api';
 
   String? _token;
   Map<String, dynamic>? _user;

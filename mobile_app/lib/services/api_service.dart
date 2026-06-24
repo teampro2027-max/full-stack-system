@@ -7,8 +7,9 @@ import 'package:flutter/foundation.dart';
 
 class ApiService {
   // OFFLINE MODE: isticmaal 10.0.2.2 (Android emulator) ama localhost (web/iOS)
-  // ONLINE MODE: u beddel 'https://full-stack-system-d4fn.onrender.com/api'
-  static const String baseUrl = 'http://10.0.2.2:5000/api';
+  // ONLINE MODE: use the Render deployment URL below
+  static const String baseUrl =
+      'https://full-stack-system-1ex6.onrender.com/api';
   static const _storage = FlutterSecureStorage();
 
   static Future<String?> _getToken() async {
