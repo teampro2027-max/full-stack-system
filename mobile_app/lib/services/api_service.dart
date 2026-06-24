@@ -3,8 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:flutter/foundation.dart';
-
 class ApiService {
   // OFFLINE MODE: isticmaal 10.0.2.2 (Android emulator) ama localhost (web/iOS)
   // ONLINE MODE: use the Render deployment URL below
@@ -24,15 +22,42 @@ class ApiService {
     };
   }
 
+  static dynamic _decodeBody(http.Response res) {
+    final body = res.body.trim();
+    if (body.isEmpty) return {'message': _fallbackMessage(res.statusCode)};
+
+    try {
+      return json.decode(body);
+    } catch (_) {
+      return {'message': _fallbackMessage(res.statusCode)};
+    }
+  }
+
+  static String _fallbackMessage(int statusCode) {
+    if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+      return 'Online backend is temporarily unavailable. Please try again shortly.';
+    }
+    if (statusCode >= 500) return 'Server error. Please try again shortly.';
+    return 'Request failed (HTTP $statusCode).';
+  }
+
+  static Never _throwRequestError(http.Response res, String fallback) {
+    final decoded = _decodeBody(res);
+    if (decoded is Map && decoded['message'] != null) {
+      throw Exception(decoded['message']);
+    }
+    throw Exception(fallback);
+  }
+
   static Future<dynamic> get(String path) async {
     final res = await http.get(
       Uri.parse('$baseUrl$path'),
       headers: await _headers(),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      return json.decode(res.body);
+      return _decodeBody(res);
     }
-    throw Exception(json.decode(res.body)['message'] ?? 'Request failed');
+    _throwRequestError(res, 'Request failed');
   }
 
   static Future<Uint8List> getBytes(String path) async {
@@ -43,7 +68,7 @@ class ApiService {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return res.bodyBytes;
     }
-    throw Exception('Failed to download file');
+    _throwRequestError(res, 'Failed to download file');
   }
 
   static Future<dynamic> post(String path, Map<String, dynamic> body) async {
@@ -53,9 +78,9 @@ class ApiService {
       body: json.encode(body),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      return json.decode(res.body);
+      return _decodeBody(res);
     }
-    throw Exception(json.decode(res.body)['message'] ?? 'Request failed');
+    _throwRequestError(res, 'Request failed');
   }
 
   static Future<dynamic> put(String path, Map<String, dynamic> body) async {
@@ -65,9 +90,9 @@ class ApiService {
       body: json.encode(body),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      return json.decode(res.body);
+      return _decodeBody(res);
     }
-    throw Exception(json.decode(res.body)['message'] ?? 'Request failed');
+    _throwRequestError(res, 'Request failed');
   }
 
   static Future<dynamic> delete(String path) async {
@@ -76,8 +101,8 @@ class ApiService {
       headers: await _headers(),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      return json.decode(res.body);
+      return _decodeBody(res);
     }
-    throw Exception(json.decode(res.body)['message'] ?? 'Request failed');
+    _throwRequestError(res, 'Request failed');
   }
 }

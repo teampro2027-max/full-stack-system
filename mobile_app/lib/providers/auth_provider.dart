@@ -22,6 +22,33 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   Map<String, dynamic>? get user => _user;
 
+  Map<String, dynamic> _decodeBody(http.Response response) {
+    final body = response.body.trim();
+    if (body.isEmpty) {
+      return {'message': _fallbackMessage(response.statusCode)};
+    }
+
+    try {
+      final decoded = json.decode(body);
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+      return {'message': decoded.toString()};
+    } catch (_) {
+      return {'message': _fallbackMessage(response.statusCode)};
+    }
+  }
+
+  String _fallbackMessage(int statusCode) {
+    if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+      return 'OTP email service is temporarily unavailable. Please try again after the email settings are updated.';
+    }
+    if (statusCode >= 500) {
+      return 'Server error. Please try again shortly.';
+    }
+    return 'Request failed (HTTP $statusCode).';
+  }
+
   Future<dynamic> login(
     String email,
     String password, {
@@ -41,7 +68,7 @@ class AuthProvider with ChangeNotifier {
         }),
       );
 
-      final data = json.decode(response.body);
+      final data = _decodeBody(response);
       if (response.statusCode == 200) {
         if (data['requiresOtp'] == true) {
           _isLoading = false;
@@ -94,7 +121,7 @@ class AuthProvider with ChangeNotifier {
         }),
       );
 
-      final data = json.decode(response.body);
+      final data = _decodeBody(response);
       _isLoading = false;
       notifyListeners();
 
@@ -133,7 +160,7 @@ class AuthProvider with ChangeNotifier {
         body: json.encode({'email': email, 'otp': otp}),
       );
 
-      final data = json.decode(response.body);
+      final data = _decodeBody(response);
       if (response.statusCode == 201 || response.statusCode == 200) {
         _token = data['token'];
         _user = data;
@@ -170,7 +197,7 @@ class AuthProvider with ChangeNotifier {
         }),
       );
 
-      final data = json.decode(response.body);
+      final data = _decodeBody(response);
       _isLoading = false;
       notifyListeners();
 
@@ -195,7 +222,7 @@ class AuthProvider with ChangeNotifier {
         body: json.encode({'email': email, 'otp': otp}),
       );
 
-      final data = json.decode(response.body);
+      final data = _decodeBody(response);
       if (response.statusCode == 200 || response.statusCode == 201) {
         _token = data['token'];
         _user = data;
@@ -232,7 +259,7 @@ class AuthProvider with ChangeNotifier {
         }),
       );
 
-      final data = json.decode(response.body);
+      final data = _decodeBody(response);
       _isLoading = false;
       notifyListeners();
 
@@ -257,7 +284,7 @@ class AuthProvider with ChangeNotifier {
         body: json.encode({'email': email}),
       );
 
-      final data = json.decode(response.body);
+      final data = _decodeBody(response);
       _isLoading = false;
       notifyListeners();
 
@@ -292,7 +319,7 @@ class AuthProvider with ChangeNotifier {
         }),
       );
 
-      final data = json.decode(response.body);
+      final data = _decodeBody(response);
       _isLoading = false;
       notifyListeners();
 
