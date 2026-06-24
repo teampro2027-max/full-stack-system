@@ -8,13 +8,14 @@ const isOfflineMode = () => process.env.OFFLINE_MODE === 'true';
 const smtpTimeout = () => Number(process.env.SMTP_TIMEOUT_MS || 8000);
 
 const hasSmtpCredentials = () => Boolean(process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD);
+const allowEmailFallback = () => process.env.ALLOW_EMAIL_FALLBACK !== 'false';
 
 const parseFromAddress = (from) => {
   const match = String(from || '').match(/^\s*"?([^"<]*)"?\s*<([^>]+)>\s*$/);
   if (!match) {
     return {
       name: process.env.FROM_NAME || 'BillTrack Pro',
-      email: process.env.FROM_EMAIL || process.env.SMTP_EMAIL || 'no-reply@example.com',
+      email: process.env.FROM_EMAIL || process.env.SMTP_EMAIL || 'no-reply@billtrackpro.com',
     };
   }
 
@@ -26,7 +27,7 @@ const parseFromAddress = (from) => {
 
 const getFromAddress = (fromName) => {
   const senderName = process.env.FROM_NAME || fromName || 'BillTrack Pro';
-  const senderEmail = process.env.FROM_EMAIL || process.env.SMTP_EMAIL || 'no-reply@example.com';
+  const senderEmail = process.env.FROM_EMAIL || process.env.SMTP_EMAIL || 'no-reply@billtrackpro.com';
   return `${senderName} <${senderEmail}>`;
 };
 
@@ -298,8 +299,9 @@ const sendEmail = async ({ to, subject, text, html, fromName } = {}) => {
     }
 
     const apiSenders = getPreferredApiSenders();
-    const apiErrors = [];
+    console.log(`Email send attempt: provider=${process.env.EMAIL_PROVIDER || 'auto'}, from=${from}, apiSenders=${apiSenders.length}`);
 
+    const apiErrors = [];
     for (const apiSender of apiSenders) {
       try {
         const sent = await apiSender({ to, subject, text, html, from });
@@ -318,7 +320,12 @@ const sendEmail = async ({ to, subject, text, html, fromName } = {}) => {
       return sendWithSmtp({ to, subject, text, html, from });
     }
 
-    console.error('SMTP fallback disabled because Email API provider is configured.');
+    if (hasSmtpCredentials()) {
+      console.warn('Email API failed; SMTP fallback enabled because SMTP credentials are configured.');
+      return sendWithSmtp({ to, subject, text, html, from });
+    }
+
+    console.error('SMTP fallback disabled because no SMTP credentials are available.');
     return false;
   } catch (err) {
     console.error('Email send failed:', err.message);
