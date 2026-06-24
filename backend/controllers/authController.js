@@ -14,7 +14,7 @@ const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-const allowOtpFallback = () => process.env.ALLOW_OTP_FALLBACK !== 'false';
+const allowOtpFallback = () => process.env.ALLOW_OTP_FALLBACK === 'true';
 const shouldExposeOtp = () => process.env.OFFLINE_MODE === 'true' || process.env.SHOW_DEBUG_OTP === 'true';
 
 const otpResponse = (payload, otp, { exposeOtp = false } = {}) => {
