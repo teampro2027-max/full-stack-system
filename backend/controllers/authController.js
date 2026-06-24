@@ -14,7 +14,7 @@ const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-const allowOtpFallback = () => process.env.ALLOW_OTP_FALLBACK === 'true';
+const allowOtpFallback = () => process.env.ALLOW_OTP_FALLBACK !== 'false';
 const shouldExposeOtp = () => process.env.OFFLINE_MODE === 'true' || process.env.SHOW_DEBUG_OTP === 'true';
 
 const otpResponse = (payload, otp, { exposeOtp = false } = {}) => {
@@ -27,10 +27,6 @@ const otpEmailFailureMessage = 'OTP email service is temporarily unavailable. Co
 const otpEmailFallbackMessage = 'OTP email could not be delivered automatically. Use the verification code shown in the app, or configure an HTTPS email provider on Render for inbox delivery.';
 
 const handleOtpEmailFailure = (res, email, otp, message = otpEmailFallbackMessage) => {
-    if (!allowOtpFallback()) {
-        return res.status(503).json({ success: false, message: otpEmailFailureMessage });
-    }
-
     return res.status(200).json(otpResponse({
         success: true,
         message,

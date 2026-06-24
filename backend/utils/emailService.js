@@ -66,7 +66,7 @@ const httpPostJson = ({ hostname, path: requestPath, headers = {}, body }) =>
   });
 
 const sendWithResend = async ({ to, subject, text, html, from }) => {
-  if (!process.env.RESEND_API_KEY) return false;
+  if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is not configured.');
 
   const response = await httpPostJson({
     hostname: 'api.resend.com',
@@ -92,7 +92,7 @@ const sendWithResend = async ({ to, subject, text, html, from }) => {
 };
 
 const sendWithBrevo = async ({ to, subject, text, html, from }) => {
-  if (!process.env.BREVO_API_KEY) return false;
+  if (!process.env.BREVO_API_KEY) throw new Error('BREVO_API_KEY is not configured.');
 
   const parsedFrom = parseFromAddress(from);
   const response = await httpPostJson({
@@ -119,7 +119,7 @@ const sendWithBrevo = async ({ to, subject, text, html, from }) => {
 };
 
 const sendWithSendGrid = async ({ to, subject, text, html, from }) => {
-  if (!process.env.SENDGRID_API_KEY) return false;
+  if (!process.env.SENDGRID_API_KEY) throw new Error('SENDGRID_API_KEY is not configured.');
 
   const parsedFrom = parseFromAddress(from);
   const content = [];
@@ -158,7 +158,16 @@ const getPreferredApiSenders = () => {
 
   if (provider) {
     if (provider === 'smtp') return [];
-    if (senders[provider]) return [senders[provider]];
+    if (senders[provider]) {
+      const preferred = [senders[provider]];
+      Object.keys(senders).forEach((providerKey) => {
+        if (providerKey === provider) return;
+        if (process.env[`${providerKey.toUpperCase()}_API_KEY`]) {
+          preferred.push(senders[providerKey]);
+        }
+      });
+      return preferred;
+    }
   }
 
   const preferred = [];
