@@ -134,100 +134,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       // Haddii backend-ku uu email-ka diray, wuxuu soo celinayaa requiresOtp: true
       // Haddii kale, check-ga backend-ka logs-kiisa fiiri
       if (res != null && res['requiresOtp'] == true) {
-        final isFallbackOtp = res['emailDelivery'] == 'fallback';
-        
-        // Show initial status message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isFallbackOtp
-                  ? 'OTP-ga waa diyaar. Isticmaal code-ka muuqda.'
-                  : 'OTP-ga waa la diray, fadlan hubi email-kaaga.',
-            ),
-            backgroundColor: isFallbackOtp
-                ? const Color(0xFF4F46E5)
-                : const Color(0xFF2563EB),
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        
-        // Show OTP code in prominent snack bar with copy button
-        if (res['debugOtp'] != null) {
-          final otpCode = res['debugOtp'].toString();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Koodkaaga Xaqiijinta (OTP Code):',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      otpCode,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 4,
-                        color: Colors.white,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Koodkan wuxuu dhacayaa 10 daqiiqo ka dib',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white70,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFF4F46E5),
-              duration: const Duration(seconds: 20),
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              action: SnackBarAction(
-                label: 'Copy',
-                textColor: Colors.white,
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: otpCode));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Koodka waa la nuqlay! ✓'),
-                      backgroundColor: Color(0xFF10B981),
-                      duration: Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-        }
         _showOtpDialog(email);
       } else {
         Navigator.of(context).pushReplacementNamed('/dashboard');
@@ -721,28 +627,13 @@ class _OtpDialogState extends State<OtpDialog> {
       _startTimer();
       setState(() => _verifying = false);
       if (!mounted) return;
-      final isFallbackOtp = res?['emailDelivery'] == 'fallback';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isFallbackOtp
-                ? 'OTP-ga waa diyaar. Isticmaal code-ka muuqda.'
-                : 'A new OTP has been sent!',
-          ),
-          backgroundColor: isFallbackOtp ? const Color(0xFF4F46E5) : Colors.green,
+        const SnackBar(
+          content: Text('OTP code has been resent to your Gmail.'),
+          backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      if (res?['debugOtp'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('OTP Code: ${res?['debugOtp']}'),
-            backgroundColor: const Color(0xFF4F46E5),
-            duration: const Duration(seconds: 15),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
     } catch (e) {
       setState(() => _verifying = false);
       if (!mounted) return;
