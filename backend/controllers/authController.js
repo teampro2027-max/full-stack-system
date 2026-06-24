@@ -1,4 +1,4 @@
-﻿const User = require('../models/User');
+const User = require('../models/User');
 const OTP = require('../models/OTP');
 const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcryptjs');
@@ -22,7 +22,7 @@ const otpResponse = (payload, otp) => {
     return response;
 };
 
-const otpEmailFailureMessage = 'Failed to send OTP email. Please check Gmail SMTP credentials and try again.';
+const otpEmailFailureMessage = 'OTP email service is temporarily unavailable. Configure an HTTPS email provider (RESEND_API_KEY, BREVO_API_KEY, or SENDGRID_API_KEY) or working SMTP credentials on Render, then try again.';
 
 const registerUser = async (req, res) => {
     const { name, email, password, phone, fcmToken } = req.body;
@@ -96,7 +96,7 @@ const registerUser = async (req, res) => {
         }
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(502).json({ success: false, message: otpEmailFailureMessage });
+            return res.status(503).json({ success: false, message: otpEmailFailureMessage });
         }
 
         // HADDII uu jiro fcmToken, isla markiiba Push Notification ahaan ugu dir OTP-ga moobilka!
@@ -211,7 +211,7 @@ const loginUser = async (req, res) => {
         await user.save();
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(502).json({ success: false, message: otpEmailFailureMessage });
+            return res.status(503).json({ success: false, message: otpEmailFailureMessage });
         }
 
         // Send OTP Push Notification if fcmToken is available
@@ -304,7 +304,7 @@ const resendLoginOtp = async (req, res) => {
 
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(502).json({ success: false, message: otpEmailFailureMessage });
+            return res.status(503).json({ success: false, message: otpEmailFailureMessage });
         }
 
         if (fcmToken && admin) {
@@ -449,7 +449,7 @@ const resendRegisterOtp = async (req, res) => {
 
         const emailSent = await sendOTP(normalizedEmail, otp);
         if (!emailSent) {
-            return res.status(502).json({ success: false, message: otpEmailFailureMessage });
+            return res.status(503).json({ success: false, message: otpEmailFailureMessage });
         }
 
         if (fcmToken && admin) {
@@ -476,7 +476,3 @@ const resendRegisterOtp = async (req, res) => {
 };
 
 module.exports = { registerUser, verifyRegisterOtp, loginUser, forgotPassword, resetPassword, resendRegisterOtp, verifyLoginOtp, resendLoginOtp };
-
-
-
-

@@ -1,32 +1,249 @@
-﻿const nodemailer = require('nodemailer');
+const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+const dns = require('dns').promises;
 
 const isOfflineMode = () => process.env.OFFLINE_MODE === 'true';
+const smtpTimeout = () => Number(process.env.SMTP_TIMEOUT_MS || 8000);
 
-const smtpTimeout = () => Number(process.env.SMTP_TIMEOUT_MS || 15000);
+const hasSmtpCredentials = () => Boolean(process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD);
 
-const _createTransporter = async () => {
-  if (isOfflineMode()) {
-    return null;
+const parseFromAddress = (from) => {
+  const match = String(from || '').match(/^\s*"?([^"<]*)"?\s*<([^>]+)>\s*$/);
+  if (!match) {
+    return {
+      name: process.env.FROM_NAME || 'BillTrack Pro',
+      email: process.env.FROM_EMAIL || process.env.SMTP_EMAIL || 'no-reply@example.com',
+    };
   }
 
-  if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
-    return null;
-  }
+  return {
+    name: match[1].trim() || process.env.FROM_NAME || 'BillTrack Pro',
+    email: match[2].trim(),
+  };
+};
 
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE !== 'false' : true,
-    auth: {
-      user: process.env.SMTP_EMAIL,
-      pass: process.env.SMTP_PASSWORD,
+const getFromAddress = (fromName) => {
+  const senderName = process.env.FROM_NAME || fromName || 'BillTrack Pro';
+  const senderEmail = process.env.FROM_EMAIL || process.env.SMTP_EMAIL || 'no-reply@example.com';
+  return `${senderName} <${senderEmail}>`;
+};
+
+const httpPostJson = ({ hostname, path: requestPath, headers = {}, body }) =>
+  new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body);
+    const req = https.request(
+      {
+        method: 'POST',
+        hostname,
+        path: requestPath,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+          ...headers,
+        },
+        timeout: Number(process.env.EMAIL_API_TIMEOUT_MS || 12000),
+      },
+      (res) => {
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          resolve({ statusCode: res.statusCode, body: data });
+        });
+      }
+    );
+
+    req.on('timeout', () => {
+      req.destroy(new Error('Email API request timed out'));
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+
+const sendWithResend = async ({ to, subject, text, html, from }) => {
+  if (!process.env.RESEND_API_KEY) return false;
+
+  const response = await httpPostJson({
+    hostname: 'api.resend.com',
+    path: '/emails',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
     },
+    body: {
+      from,
+      to: [to],
+      subject,
+      text,
+      html,
+    },
+  });
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    console.log(`Email sent to ${to} using Resend API`);
+    return true;
+  }
+
+  throw new Error(`Resend API failed with HTTP ${response.statusCode}: ${response.body}`);
+};
+
+const sendWithBrevo = async ({ to, subject, text, html, from }) => {
+  if (!process.env.BREVO_API_KEY) return false;
+
+  const parsedFrom = parseFromAddress(from);
+  const response = await httpPostJson({
+    hostname: 'api.brevo.com',
+    path: '/v3/smtp/email',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+    },
+    body: {
+      sender: parsedFrom,
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    },
+  });
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    console.log(`Email sent to ${to} using Brevo API`);
+    return true;
+  }
+
+  throw new Error(`Brevo API failed with HTTP ${response.statusCode}: ${response.body}`);
+};
+
+const sendWithSendGrid = async ({ to, subject, text, html, from }) => {
+  if (!process.env.SENDGRID_API_KEY) return false;
+
+  const parsedFrom = parseFromAddress(from);
+  const content = [];
+  if (text) content.push({ type: 'text/plain', value: text });
+  if (html) content.push({ type: 'text/html', value: html });
+
+  const response = await httpPostJson({
+    hostname: 'api.sendgrid.com',
+    path: '/v3/mail/send',
+    headers: {
+      Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`,
+    },
+    body: {
+      personalizations: [{ to: [{ email: to }] }],
+      from: parsedFrom,
+      subject,
+      content,
+    },
+  });
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    console.log(`Email sent to ${to} using SendGrid API`);
+    return true;
+  }
+
+  throw new Error(`SendGrid API failed with HTTP ${response.statusCode}: ${response.body}`);
+};
+
+const getPreferredApiSenders = () => {
+  const provider = (process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
+  const senders = {
+    resend: sendWithResend,
+    brevo: sendWithBrevo,
+    sendgrid: sendWithSendGrid,
+  };
+
+  if (provider && senders[provider]) return [senders[provider]];
+  if (provider === 'smtp') return [];
+
+  return [sendWithResend, sendWithBrevo, sendWithSendGrid];
+};
+
+const getSmtpCandidates = async () => {
+  if (!hasSmtpCredentials()) return [];
+
+  const auth = {
+    user: process.env.SMTP_EMAIL,
+    pass: process.env.SMTP_PASSWORD,
+  };
+  const common = {
+    auth,
     connectionTimeout: smtpTimeout(),
     greetingTimeout: smtpTimeout(),
     socketTimeout: smtpTimeout(),
+  };
+
+  if (process.env.SMTP_SERVICE) {
+    return [{ label: process.env.SMTP_SERVICE, options: { service: process.env.SMTP_SERVICE, ...common } }];
+  }
+
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = Number(process.env.SMTP_PORT || 465);
+  const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE !== 'false' : port === 465;
+  const candidates = [
+    { label: `${host}:${port}`, options: { host, port, secure, ...common } },
+  ];
+
+  const isGmail = host.includes('gmail.com');
+  if (isGmail && process.env.SMTP_DISABLE_GMAIL_FALLBACKS !== 'true') {
+    candidates.push(
+      { label: 'gmail-service', options: { service: 'gmail', ...common } },
+      { label: 'gmail-465-ipv4', options: { host: 'smtp.gmail.com', port: 465, secure: true, family: 4, ...common } },
+      { label: 'gmail-587-ipv4', options: { host: 'smtp.gmail.com', port: 587, secure: false, family: 4, ...common } }
+    );
+
+    try {
+      const [ip] = await dns.resolve4('smtp.gmail.com');
+      if (ip) {
+        candidates.push(
+          {
+            label: 'gmail-465-direct-ipv4',
+            options: { host: ip, port: 465, secure: true, tls: { servername: 'smtp.gmail.com' }, ...common },
+          },
+          {
+            label: 'gmail-587-direct-ipv4',
+            options: { host: ip, port: 587, secure: false, tls: { servername: 'smtp.gmail.com' }, ...common },
+          }
+        );
+      }
+    } catch (err) {
+      console.error('Could not resolve smtp.gmail.com IPv4 address:', err.message);
+    }
+  }
+
+  const seen = new Set();
+  return candidates.filter((candidate) => {
+    const key = JSON.stringify(candidate.options);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
+};
+
+const sendWithSmtp = async ({ to, subject, text, html, from }) => {
+  const candidates = await getSmtpCandidates();
+  if (candidates.length === 0) {
+    console.error('Email send failed: configure RESEND_API_KEY, BREVO_API_KEY, SENDGRID_API_KEY, or SMTP_EMAIL/SMTP_PASSWORD.');
+    return false;
+  }
+
+  const errors = [];
+  for (const candidate of candidates) {
+    try {
+      const transporter = nodemailer.createTransport(candidate.options);
+      const info = await transporter.sendMail({ from, to, subject, text, html });
+      console.log(`Email sent to ${to} using SMTP ${candidate.label}: ${info.messageId}`);
+      return true;
+    } catch (err) {
+      errors.push(`${candidate.label}: ${err.message}`);
+    }
+  }
+
+  console.error('Email send failed on all SMTP transports:', errors.join(' | '));
+  return false;
 };
 
 const logOfflineOTP = (email, otp, type) => {
@@ -50,9 +267,9 @@ const logOfflineOTP = (email, otp, type) => {
 };
 
 const sendEmail = async ({ to, subject, text, html, fromName } = {}) => {
-  try {
-    const from = `${process.env.FROM_NAME || fromName || 'BillTrack Pro'} <${process.env.FROM_EMAIL || process.env.SMTP_EMAIL || 'no-reply@example.com'}>`;
+  const from = getFromAddress(fromName);
 
+  try {
     if (isOfflineMode()) {
       console.log('\n================================================================');
       console.log('[OFFLINE EMAIL MOCK]');
@@ -65,16 +282,23 @@ const sendEmail = async ({ to, subject, text, html, fromName } = {}) => {
       return true;
     }
 
-    const transporter = await _createTransporter();
+    const apiSenders = getPreferredApiSenders();
+    const apiErrors = [];
 
-    if (!transporter) {
-      console.error('Email send failed: SMTP_EMAIL and SMTP_PASSWORD are required when OFFLINE_MODE is false.');
-      return false;
+    for (const apiSender of apiSenders) {
+      try {
+        const sent = await apiSender({ to, subject, text, html, from });
+        if (sent) return true;
+      } catch (err) {
+        apiErrors.push(err.message);
+      }
     }
 
-    const info = await transporter.sendMail({ from, to, subject, text, html });
-    console.log(`Email sent to ${to}: ${info.messageId}`);
-    return true;
+    if (apiErrors.length > 0) {
+      console.error('Email API send failed:', apiErrors.join(' | '));
+    }
+
+    return sendWithSmtp({ to, subject, text, html, from });
   } catch (err) {
     console.error('Email send failed:', err.message);
     return false;

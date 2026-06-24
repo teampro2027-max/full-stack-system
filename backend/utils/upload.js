@@ -20,11 +20,11 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|pdf/;
-    const isValid = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const isValid = allowedTypes.(path.extname(file.originalname).toLowerCase());
     if (isValid) cb(null, true);
     else cb(new Error('Only JPEG, PNG, and PDF files are allowed'));
 };
-
+test
 const upload = multer({
     storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
