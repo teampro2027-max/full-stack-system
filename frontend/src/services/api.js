@@ -2,16 +2,7 @@ import axios from 'axios';
 
 const normalizeBaseUrl = (url) => url.replace(/\/+$/, '');
 
-const getDefaultBaseUrl = () => {
-  if (typeof window === 'undefined') return 'http://127.0.0.1:5000/api';
-
-  const { protocol, hostname } = window.location;
-  if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://127.0.0.1:5000/api';
-  }
-
-  return `${protocol}//${hostname}:5000/api`;
-};
+const getDefaultBaseUrl = () => 'https://full-stack-system-1ex6.onrender.com/api';
 
 export const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || getDefaultBaseUrl());
 
