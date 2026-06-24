@@ -30,102 +30,21 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (res != null && res['requiresOtp'] == true) {
+        // This branch is no longer needed - kept for backward compatibility
         final isFallbackOtp = res['emailDelivery'] == 'fallback';
-        
-        // Show initial status message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isFallbackOtp
-                  ? 'OTP-ga waa diyaar. Isticmaal code-ka muuqda.'
-                  : 'OTP-ga waa la diray, fadlan hubi email-kaaga.',
+              isFallbackOtp ? 'OTP verification required' : 'OTP sent to email',
             ),
-            backgroundColor: isFallbackOtp
-                ? const Color(0xFF5B21B6)
-                : const Color(0xFF2563EB),
-            duration: const Duration(seconds: 4),
+            backgroundColor: const Color(0xFF5B21B6),
+            duration: const Duration(seconds: 3),
             behavior: SnackBarBehavior.floating,
           ),
         );
-        
-        // Show OTP code in prominent snack bar with copy button
-        if (res['debugOtp'] != null) {
-          final otpCode = res['debugOtp'].toString();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Koodkaaga Xaqiijinta (OTP Code):',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      otpCode,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 4,
-                        color: Colors.white,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Koodkan wuxuu dhacayaa 10 daqiiqo ka dib',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white70,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFF5B21B6),
-              duration: const Duration(seconds: 20),
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              action: SnackBarAction(
-                label: 'Copy',
-                textColor: Colors.white,
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: otpCode));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Koodka waa la nuqlay! ✓'),
-                      backgroundColor: Color(0xFF10B981),
-                      duration: Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-        }
         _showOtpDialog(_emailController.text.trim().toLowerCase());
       } else {
+        // Direct login successful - no OTP required
         Navigator.of(context).pushReplacementNamed('/dashboard');
       }
     } catch (e) {
@@ -777,7 +696,9 @@ class _LoginOtpDialogState extends State<LoginOtpDialog> {
                 ? 'OTP-ga waa diyaar. Isticmaal code-ka muuqda.'
                 : 'A new OTP has been sent!',
           ),
-          backgroundColor: isFallbackOtp ? const Color(0xFF5B21B6) : Colors.green,
+          backgroundColor: isFallbackOtp
+              ? const Color(0xFF5B21B6)
+              : Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );

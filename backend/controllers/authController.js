@@ -206,52 +206,23 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ message: 'Please verify your email registration first.' });
         }
 
-        // Bypassing OTP for admin role to avoid breaking React Web Admin panel
-        if (user.role === 'admin') {
-            await AuditLog.create({ userId: user._id, action: 'LOGIN', resource: 'User', details: { email: normalizedEmail } });
-            return res.json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                phone: user.phone,
-                role: user.role,
-                token: generateToken(user._id)
-            });
+        // Direct login without OTP - OTP is only for registration
+        await AuditLog.create({ userId: user._id, action: 'LOGIN', resource: 'User', details: { email: normalizedEmail } });
+        
+        // Update FCM token if provided
+        if (fcmToken) {
+            user.fcmToken = fcmToken;
+            await user.save();
         }
 
-        // Generate 6-digit OTP code for standard users
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
-
-        user.otp = otp;
-        user.otpExpiry = otpExpiry;
-        await user.save();
-        const emailSent = await sendOTP(normalizedEmail, otp);
-        if (!emailSent) {
-            return handleOtpEmailFailure(res, normalizedEmail, otp);
-        }
-
-        // Send OTP Push Notification if fcmToken is available
-        if (fcmToken && admin) {
-            const message = {
-                notification: { 
-                    title: 'Xaqiijinta Gelitaanka (Login OTP)', 
-                    body: `Koodkaaga gelitaanku waa: ${otp}. Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.` 
-                },
-                token: fcmToken
-            };
-            admin.messaging().send(message)
-                .then(() => console.log(`âœ… Login OTP Push Notification sent directly to device.`))
-                .catch(err => console.error('âš ï¸ Failed to send Login OTP Push Notification:', err));
-        }
-
-        res.status(200).json(otpResponse({
-            success: true,
-            message: 'OTP sent to Gmail',
-            requiresOtp: true,
-            email: normalizedEmail,
-            emailDelivery: 'sent'
-        }, otp));
+        res.status(200).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            token: generateToken(user._id)
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

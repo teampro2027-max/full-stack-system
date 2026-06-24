@@ -70,21 +70,17 @@ class AuthProvider with ChangeNotifier {
 
       final data = _decodeBody(response);
       if (response.statusCode == 200) {
-        if (data['requiresOtp'] == true) {
-          _isLoading = false;
-          notifyListeners();
-          return data;
-        }
+        // Direct login successful - OTP is only for registration now
         _token = data['token'];
         _user = data;
         if (_token != null) {
           await _storage.write(key: 'jwt', value: _token!);
           await _storage.write(key: 'user', value: json.encode(data));
-          // Update FCM token on server after login
           NotificationService.updateTokenOnServer();
         }
+        _isLoading = false;
         notifyListeners();
-        return null;
+        return null; // No OTP needed - direct login successful
       } else {
         throw Exception(data['message'] ?? 'Login failed');
       }
@@ -183,7 +179,10 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>?> resendRegisterOtp(String email, {String? fcmToken}) async {
+  Future<Map<String, dynamic>?> resendRegisterOtp(
+    String email, {
+    String? fcmToken,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
@@ -246,7 +245,10 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>?> resendLoginOtp(String email, {String? fcmToken}) async {
+  Future<Map<String, dynamic>?> resendLoginOtp(
+    String email, {
+    String? fcmToken,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
