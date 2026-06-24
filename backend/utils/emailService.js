@@ -156,10 +156,16 @@ const getPreferredApiSenders = () => {
     sendgrid: sendWithSendGrid,
   };
 
-  if (provider && senders[provider]) return [senders[provider]];
-  if (provider === 'smtp') return [];
+  if (provider) {
+    if (provider === 'smtp') return [];
+    if (senders[provider]) return [senders[provider]];
+  }
 
-  return [sendWithResend, sendWithBrevo, sendWithSendGrid];
+  const preferred = [];
+  if (process.env.RESEND_API_KEY) preferred.push(sendWithResend);
+  if (process.env.BREVO_API_KEY) preferred.push(sendWithBrevo);
+  if (process.env.SENDGRID_API_KEY) preferred.push(sendWithSendGrid);
+  return preferred;
 };
 
 const getSmtpCandidates = async () => {
@@ -298,7 +304,13 @@ const sendEmail = async ({ to, subject, text, html, fromName } = {}) => {
       console.error('Email API send failed:', apiErrors.join(' | '));
     }
 
-    return sendWithSmtp({ to, subject, text, html, from });
+    const provider = (process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
+    if (provider === 'smtp' || getPreferredApiSenders().length === 0) {
+      return sendWithSmtp({ to, subject, text, html, from });
+    }
+
+    console.error('SMTP fallback disabled because Email API provider is configured.');
+    return false;
   } catch (err) {
     console.error('Email send failed:', err.message);
     return false;
