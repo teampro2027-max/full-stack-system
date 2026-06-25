@@ -323,12 +323,12 @@ const sendEmail = async ({ to, subject, text, html, fromName } = {}) => {
       return sendWithSmtp({ to, subject, text, html, from });
     }
 
-    if (hasSmtpCredentials()) {
+    if (hasSmtpCredentials() && allowEmailFallback()) {
       console.warn('Email API failed; SMTP fallback enabled because SMTP credentials are configured.');
       return sendWithSmtp({ to, subject, text, html, from });
     }
 
-    console.error('SMTP fallback disabled because no SMTP credentials are available.');
+    console.error('SMTP fallback disabled or no SMTP credentials are available.');
     return false;
   } catch (err) {
     console.error('Email send failed:', err.message);

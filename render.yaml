@@ -21,9 +21,15 @@ services:
       - key: FROM_EMAIL
         sync: false
       - key: EMAIL_PROVIDER
-        sync: false
+        value: smtp
       - key: ALLOW_OTP_FALLBACK
-        value: true
+        value: false
+      - key: ALLOW_EMAIL_FALLBACK
+        value: false
+      - key: OFFLINE_MODE
+        value: false
+      - key: SHOW_DEBUG_OTP
+        value: false
       - key: RESEND_API_KEY
         sync: false
       - key: BREVO_API_KEY
