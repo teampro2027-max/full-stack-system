@@ -65,6 +65,51 @@ const httpPostJson = ({ hostname, path: requestPath, headers = {}, body }) =>
     req.write(payload);
     req.end();
   });
+const httpPostJsonUrl = async (urlString, { headers = {}, body, redirects = 3 } = {}) => {
+  const target = new URL(urlString);
+  if (target.protocol !== 'https:') {
+    throw new Error('Email webhook URL must use HTTPS.');
+  }
+  const payload = JSON.stringify(body || {});
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        method: 'POST',
+        hostname: target.hostname,
+        path: `${target.pathname}${target.search}`,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+          ...headers,
+        },
+        timeout: Number(process.env.EMAIL_API_TIMEOUT_MS || 12000),
+      },
+      (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirects > 0) {
+          res.resume();
+          const nextUrl = new URL(res.headers.location, target).toString();
+          resolve(httpPostJsonUrl(nextUrl, { headers, body, redirects: redirects - 1 }));
+          return;
+        }
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          resolve({ statusCode: res.statusCode, body: data });
+        });
+      }
+    );
+    req.on('timeout', () => {
+      req.destroy(new Error('Email webhook request timed out'));
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+};
+
 
 const sendWithResend = async ({ to, subject, text, html, from }) => {
   const apiKey = String(process.env.RESEND_API_KEY || '').trim();
@@ -150,6 +195,42 @@ const sendWithSendGrid = async ({ to, subject, text, html, from }) => {
   }
 
   throw new Error(`SendGrid API failed with HTTP ${response.statusCode}: ${response.body}`);
+};
+
+const sendWithGoogleScript = async ({ to, subject, text, html, from }) => {
+  const webhookUrl = String(
+    process.env.GOOGLE_SCRIPT_EMAIL_URL ||
+    process.env.GMAIL_WEBHOOK_URL ||
+    process.env.GOOGLE_APPS_SCRIPT_URL ||
+    ''
+  ).trim();
+  if (!webhookUrl) throw new Error('GOOGLE_SCRIPT_EMAIL_URL is not configured.');
+
+  const secret = String(
+    process.env.GOOGLE_SCRIPT_EMAIL_SECRET ||
+    process.env.GMAIL_WEBHOOK_SECRET ||
+    ''
+  ).trim();
+  const parsedFrom = parseFromAddress(from);
+  const response = await httpPostJsonUrl(webhookUrl, {
+    headers: secret ? { 'X-Email-Secret': secret } : {},
+    body: {
+      secret,
+      to,
+      subject,
+      text,
+      html,
+      fromName: parsedFrom.name,
+      fromEmail: parsedFrom.email,
+    },
+  });
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    console.log(`Email sent to ${to} using Google Apps Script webhook`);
+    return true;
+  }
+
+  throw new Error(`Google Apps Script email webhook failed with HTTP ${response.statusCode}: ${response.body}`);
 };
 
 const getPreferredApiSenders = () => {
