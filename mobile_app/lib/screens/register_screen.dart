@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'dart:async';
-import '../services/notification_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -118,33 +117,32 @@ class _RegisterScreenState extends State<RegisterScreen>
       // Log for debugging: Hubi in email-ka uu sax yahay ka hor intaan la dirin
       debugPrint('Attempting registration for: $email');
 
-      // Qaado token-ka moobilka si backend-ku Push Notification kuugu soo diro
-      String? fcmToken = await NotificationService.getToken();
-
       final res = await authProvider.register(
         _nameController.text.trim(),
         email,
         _passwordController.text,
         '252${_normalizePhone(_phoneController.text)}',
-        fcmToken: fcmToken,
       );
 
       if (!mounted) return;
 
-      // Haddii backend-ku uu email-ka diray, wuxuu soo celinayaa requiresOtp: true
-      // Haddii kale, check-ga backend-ka logs-kiisa fiiri
       if (res != null && res['requiresOtp'] == true) {
         final debugOtp = res['debugOtp'];
-        if (debugOtp != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        final snackMessage = debugOtp != null
+            ? 'OTP Code: $debugOtp'
+            : (res['message']?.toString() ?? 'OTP code is ready in the app.');
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
             SnackBar(
-              content: Text('OTP Code: $debugOtp'),
+              content: Text(snackMessage),
               backgroundColor: const Color(0xFF4F46E5),
               duration: const Duration(seconds: 20),
               behavior: SnackBarBehavior.floating,
             ),
           );
-        }
+        await Future<void>.delayed(const Duration(milliseconds: 700));
+        if (!mounted) return;
         _showOtpDialog(email);
       } else {
         Navigator.of(context).pushReplacementNamed('/dashboard');
@@ -361,8 +359,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                             padding: const EdgeInsets.only(top: 4, left: 4),
                             child: Text(
                               _gmailPrefixController.text.trim().isEmpty
-                                  ? 'OTP will be sent to your Gmail'
-                                  : 'OTP → ${_gmailPrefixController.text.trim().toLowerCase()}@gmail.com',
+                                  ? 'OTP code will appear in the app'
+                                  : 'OTP for ${_gmailPrefixController.text.trim().toLowerCase()}@gmail.com will appear in the app',
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: Color(0xFF9CA3AF),
@@ -476,7 +474,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                       ),
                                     )
                                   : const Text(
-                                      'Create Account & Send OTP',
+                                      'Create Account & Show OTP',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
@@ -629,30 +627,28 @@ class _OtpDialogState extends State<OtpDialog> {
   Future<void> _resendOtp() async {
     try {
       setState(() => _verifying = true);
-      String? fcmToken = await NotificationService.getToken();
       if (!mounted) return;
       final res = await Provider.of<AuthProvider>(
         context,
         listen: false,
-      ).resendRegisterOtp(widget.email, fcmToken: fcmToken);
+      ).resendRegisterOtp(widget.email);
       _startTimer();
       setState(() => _verifying = false);
       if (!mounted) return;
       final debugOtp = res?['debugOtp'];
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            debugOtp != null
-                ? 'OTP Code: $debugOtp'
-                : 'OTP code has been resent to your Gmail.',
+      final snackMessage = debugOtp != null
+          ? 'OTP Code: $debugOtp'
+          : (res?['message']?.toString() ?? 'New OTP code is ready in the app.');
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(snackMessage),
+            backgroundColor: const Color(0xFF4F46E5),
+            duration: const Duration(seconds: 20),
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor: debugOtp != null
-              ? const Color(0xFF4F46E5)
-              : Colors.green,
-          duration: Duration(seconds: debugOtp != null ? 20 : 4),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+        );
     } catch (e) {
       setState(() => _verifying = false);
       if (!mounted) return;
@@ -718,7 +714,7 @@ class _OtpDialogState extends State<OtpDialog> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
-              Icons.mark_email_read_outlined,
+              Icons.verified_user_outlined,
               color: Color(0xFF4F46E5),
               size: 22,
             ),
@@ -740,7 +736,7 @@ class _OtpDialogState extends State<OtpDialog> {
               style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
               children: [
                 const TextSpan(
-                  text: 'A 6-digit verification code was sent to\n',
+                  text: 'Enter the 6-digit verification code shown in the app for\n',
                 ),
                 TextSpan(
                   text: widget.email,

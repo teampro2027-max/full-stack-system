@@ -37,7 +37,7 @@ const handleOtpEmailFailure = (res, email, otp, message = otpEmailFallbackMessag
 };
 
 const registerUser = async (req, res) => {
-    const { name, email, password, phone, fcmToken } = req.body;
+    const { name, email, password, phone } = req.body;
     try {
         if (!name || !email || !password || !phone) {
             return res.status(400).json({ message: 'Name, email, password, and phone number are required' });
@@ -106,32 +106,14 @@ const registerUser = async (req, res) => {
                 otpExpiry
             });
         }
-        const emailSent = await sendOTP(normalizedEmail, otp);
-        if (!emailSent) {
-            return handleOtpEmailFailure(res, normalizedEmail, otp);
-        }
-
-        // HADDII uu jiro fcmToken, isla markiiba Push Notification ahaan ugu dir OTP-ga moobilka!
-        if (fcmToken && admin) {
-            const message = {
-                notification: { 
-                    title: 'Xaqiijinta Koontada (OTP)', 
-                    body: `Koodkaaga xaqiijintu waa: ${otp}. Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.` 
-                },
-                token: fcmToken
-            };
-            admin.messaging().send(message)
-                .then(() => console.log(`âœ… OTP Push Notification sent directly to device.`))
-                .catch(err => console.error('âš ï¸ Failed to send OTP Push Notification:', err));
-        }
-        // Email-ka waa la xaqiijiyay in la diray ka hor inta aan response la celin.
+        // Registration OTP is shown directly in the app instead of being sent by email.
         res.status(200).json(otpResponse({
             success: true,
-            message: 'OTP sent to Gmail',
+            message: 'OTP code is ready in the app',
             requiresOtp: true,
             email: normalizedEmail,
-            emailDelivery: 'sent'
-        }, otp));
+            emailDelivery: 'shown_in_app'
+        }, otp, { exposeOtp: true }));
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -425,7 +407,7 @@ const resetPassword = async (req, res) => {
     }
 };
 const resendRegisterOtp = async (req, res) => {
-    const { email, fcmToken } = req.body;
+    const { email } = req.body;
     try {
         if (!email) {
             return res.status(400).json({ message: 'Email is required' });
@@ -444,29 +426,13 @@ const resendRegisterOtp = async (req, res) => {
         user.otpExpiry = otpExpiry;
         await user.save();
 
-        const emailSent = await sendOTP(normalizedEmail, otp);
-        if (!emailSent) {
-            return handleOtpEmailFailure(res, normalizedEmail, otp);
-        }
-
-        if (fcmToken && admin) {
-            const message = {
-                notification: { 
-                    title: 'Xaqiijinta Koontada (OTP)', 
-                    body: `Koodkaaga cusub waa: ${otp}. Koodkan wuxuu dhacayaa 10 daqiiqo ka dib.` 
-                },
-                token: fcmToken
-            };
-            admin.messaging().send(message).catch(err => console.error('âš ï¸ Failed to send OTP Push Notification:', err));
-        }
-
         res.status(200).json(otpResponse({
             success: true,
-            message: 'OTP resent successfully',
+            message: 'OTP code is ready in the app',
             requiresOtp: true,
             email: normalizedEmail,
-            emailDelivery: 'sent'
-        }, otp));
+            emailDelivery: 'shown_in_app'
+        }, otp, { exposeOtp: true }));
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
