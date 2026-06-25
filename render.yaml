@@ -21,7 +21,7 @@ services:
       - key: FROM_EMAIL
         sync: false
       - key: EMAIL_PROVIDER
-        value: smtp
+        value: google_script
       - key: ALLOW_OTP_FALLBACK
         value: false
       - key: ALLOW_EMAIL_FALLBACK
@@ -35,6 +35,10 @@ services:
       - key: BREVO_API_KEY
         sync: false
       - key: SENDGRID_API_KEY
+        sync: false
+      - key: GOOGLE_SCRIPT_EMAIL_URL
+        sync: false
+      - key: GOOGLE_SCRIPT_EMAIL_SECRET
         sync: false
       - key: SMTP_EMAIL
         sync: false

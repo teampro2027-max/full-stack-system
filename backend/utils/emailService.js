@@ -226,6 +226,15 @@ const sendWithGoogleScript = async ({ to, subject, text, html, from }) => {
   });
 
   if (response.statusCode >= 200 && response.statusCode < 300) {
+    let parsedBody = null;
+    try {
+      parsedBody = response.body ? JSON.parse(response.body) : null;
+    } catch (_) {
+      parsedBody = null;
+    }
+    if (parsedBody && parsedBody.success === false) {
+      throw new Error(`Google Apps Script email webhook failed: ${parsedBody.error || parsedBody.message || response.body}`);
+    }
     console.log(`Email sent to ${to} using Google Apps Script webhook`);
     return true;
   }
@@ -238,6 +247,13 @@ const getPreferredApiSenders = () => {
   const senders = {
     resend: sendWithResend,
     brevo: sendWithBrevo,
+    google_script: sendWithGoogleScript,
+    googlescript: sendWithGoogleScript,
+    'google-script': sendWithGoogleScript,
+    apps_script: sendWithGoogleScript,
+    'apps-script': sendWithGoogleScript,
+    gmail_webhook: sendWithGoogleScript,
+    'gmail-webhook': sendWithGoogleScript,
     sendgrid: sendWithSendGrid,
   };
 
@@ -258,6 +274,11 @@ const getPreferredApiSenders = () => {
   const preferred = [];
   if (process.env.RESEND_API_KEY) preferred.push(sendWithResend);
   if (process.env.BREVO_API_KEY) preferred.push(sendWithBrevo);
+  if (
+    process.env.GOOGLE_SCRIPT_EMAIL_URL ||
+    process.env.GMAIL_WEBHOOK_URL ||
+    process.env.GOOGLE_APPS_SCRIPT_URL
+  ) preferred.push(sendWithGoogleScript);
   if (process.env.SENDGRID_API_KEY) preferred.push(sendWithSendGrid);
   return preferred;
 };

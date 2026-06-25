@@ -134,6 +134,17 @@ class _RegisterScreenState extends State<RegisterScreen>
       // Haddii backend-ku uu email-ka diray, wuxuu soo celinayaa requiresOtp: true
       // Haddii kale, check-ga backend-ka logs-kiisa fiiri
       if (res != null && res['requiresOtp'] == true) {
+        final debugOtp = res['debugOtp'];
+        if (debugOtp != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('OTP Code: $debugOtp'),
+              backgroundColor: const Color(0xFF4F46E5),
+              duration: const Duration(seconds: 20),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         _showOtpDialog(email);
       } else {
         Navigator.of(context).pushReplacementNamed('/dashboard');
@@ -627,10 +638,18 @@ class _OtpDialogState extends State<OtpDialog> {
       _startTimer();
       setState(() => _verifying = false);
       if (!mounted) return;
+      final debugOtp = res?['debugOtp'];
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('OTP code has been resent to your Gmail.'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: Text(
+            debugOtp != null
+                ? 'OTP Code: $debugOtp'
+                : 'OTP code has been resent to your Gmail.',
+          ),
+          backgroundColor: debugOtp != null
+              ? const Color(0xFF4F46E5)
+              : Colors.green,
+          duration: Duration(seconds: debugOtp != null ? 20 : 4),
           behavior: SnackBarBehavior.floating,
         ),
       );
