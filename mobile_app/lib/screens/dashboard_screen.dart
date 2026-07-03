@@ -706,12 +706,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: (meta['color'] as Color).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
-              child: getCategoryIcon(
-                meta['icon'] as String? ?? '📋',
-                color: (meta['color'] as Color),
-                size: 24,
-              ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: meta['image'] != null && meta['image'].toString().isNotEmpty
+                  ? Image.network(
+                      'https://full-stack-system-1ex6.onrender.com${meta['image']}',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: getCategoryIcon(
+                          meta['icon'] as String? ?? '📋',
+                          color: (meta['color'] as Color),
+                          size: 24,
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: getCategoryIcon(
+                        meta['icon'] as String? ?? '📋',
+                        color: (meta['color'] as Color),
+                        size: 24,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 14),

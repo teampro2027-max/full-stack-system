@@ -303,6 +303,7 @@ Map<String, dynamic> getCategoryMeta(BuildContext context, String categoryKey, M
       'icon': dynamicCat['icon'] ?? '📋',
       'color': color,
       'name': dynamicCat['name'] ?? categoryKey,
+      'image': dynamicCat['image'],
     };
   }
 
