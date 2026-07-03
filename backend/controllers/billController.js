@@ -2,6 +2,7 @@ const Bill = require('../models/Bill');
 const Notification = require('../models/Notification');
 const { sendPushNotification } = require('./notificationController');
 const { resolveBillDates } = require('../utils/billDateUtils');
+const { processReminderBills } = require('../utils/cronJobs');
 
 const getBills = async (req, res) => {
     try {
@@ -12,6 +13,12 @@ const getBills = async (req, res) => {
         const { status, category, search } = req.query;
         if (status && status !== 'all') query.status = status;
         if (category && category !== 'all') query.category = category;
+
+        try {
+            await processReminderBills(new Date());
+        } catch (reminderError) {
+            console.error('Reminder refresh failed during bill fetch:', reminderError.message);
+        }
 
         let bills = await Bill.find(query).populate('userId', 'name email').sort({ createdAt: -1 });
 

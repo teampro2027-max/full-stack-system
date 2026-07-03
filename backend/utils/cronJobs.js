@@ -4,6 +4,66 @@ const Notification = require('../models/Notification');
 const { sendPushNotification } = require('../controllers/notificationController');
 const { sendBillReminderEmail } = require('./emailService');
 
+const processReminderBills = async (now = new Date()) => {
+    const billsToProcess = await Bill.find({
+        notificationDate: { $exists: true, $ne: null, $lte: now }
+    }).populate('userId', 'name email');
+
+    for (let bill of billsToProcess) {
+        if (!bill.userId) {
+            console.log(`Skipping reminder for bill ${bill._id} because userId is missing.`);
+            continue;
+        }
+
+        const wasPaid = bill.status === 'paid';
+        if (wasPaid) {
+            bill.status = 'unpaid';
+            bill.lastPaidDate = null;
+        }
+
+        const userName = bill.userId.name || 'Macaamiil';
+        const userEmail = bill.userId.email;
+
+        const msg = wasPaid
+            ? `Xasuusin: Biilkaaga "${bill.title}" waa dib u soo shaac-baxay. Hadda waad bixin kartaa ($${bill.amount}).`
+            : `Xasuusin: Biilkaaga "${bill.title}" waxaa la gaaray waqtigii loogu talagalay in la bixiyo ($${bill.amount}).`;
+
+        // In-App Notification
+        await Notification.create({
+            userId: bill.userId._id,
+            title: 'Xasuusin Biil',
+            message: msg
+        });
+
+        // Push Notification
+        await sendPushNotification(bill.userId._id, 'Xasuusin Biil', msg);
+
+        // Email Reminder
+        if (userEmail) {
+            await sendBillReminderEmail(userEmail, userName, bill.title, bill.amount);
+        }
+
+        // Update dates for next cycle (if recurring) or clear reminder (if one-time)
+        if (bill.isRecurring) {
+            const nextDate = new Date(bill.notificationDate);
+            if (bill.recurringInterval === 'yearly') {
+                nextDate.setFullYear(nextDate.getFullYear() + 1);
+            } else {
+                nextDate.setMonth(nextDate.getMonth() + 1);
+            }
+            bill.notificationDate = nextDate;
+            bill.dueDate = nextDate;
+        } else {
+            bill.notificationDate = null;
+        }
+
+        await bill.save();
+        console.log(`Processed reminder/reset for bill ${bill._id}`);
+    }
+
+    return billsToProcess.length;
+};
+
 // Run everyday at 8:00 AM
 const setupCronJobs = () => {
     // 1. Run everyday at 8:00 AM for Upcoming & Overdue checks
@@ -61,63 +121,8 @@ const setupCronJobs = () => {
         console.log('Running minute-by-minute reminder and paid-to-unpaid reset check');
         try {
             const now = new Date();
-            const billsToProcess = await Bill.find({
-                notificationDate: { $exists: true, $ne: null, $lte: now }
-            }).populate('userId', 'name email');
-
-            for (let bill of billsToProcess) {
-                if (!bill.userId) {
-                    console.log(`Skipping reminder for bill ${bill._id} because userId is missing.`);
-                    continue;
-                }
-
-                const wasPaid = bill.status === 'paid';
-                if (wasPaid) {
-                    bill.status = 'unpaid';
-                    bill.lastPaidDate = null;
-                }
-
-                const userName = bill.userId.name || 'Macaamiil';
-                const userEmail = bill.userId.email;
-                
-                const msg = wasPaid
-                    ? `Xasuusin: Biilkaaga "${bill.title}" waa dib u soo shaac-baxay. Hadda waad bixin kartaa ($${bill.amount}).`
-                    : `Xasuusin: Biilkaaga "${bill.title}" waxaa la gaaray waqtigii loogu talagalay in la bixiyo ($${bill.amount}).`;
-
-                // In-App Notification
-                await Notification.create({
-                    userId: bill.userId._id,
-                    title: 'Xasuusin Biil',
-                    message: msg
-                });
-
-                // Push Notification
-                await sendPushNotification(bill.userId._id, 'Xasuusin Biil', msg);
-
-                // Email Reminder
-                if (userEmail) {
-                    await sendBillReminderEmail(userEmail, userName, bill.title, bill.amount);
-                }
-
-                // Update dates for next cycle (if recurring) or clear reminder (if one-time)
-                if (bill.isRecurring) {
-                    const nextDate = new Date(bill.notificationDate);
-                    if (bill.recurringInterval === 'yearly') {
-                        nextDate.setFullYear(nextDate.getFullYear() + 1);
-                    } else {
-                        // default to monthly
-                        nextDate.setMonth(nextDate.getMonth() + 1);
-                    }
-                    bill.notificationDate = nextDate;
-                    bill.dueDate = nextDate;
-                } else {
-                    // Set notificationDate to null so it doesn't trigger again
-                    bill.notificationDate = null;
-                }
-
-                await bill.save();
-                console.log(`Processed reminder/reset for bill ${bill._id}`);
-            }
+            const processedCount = await processReminderBills(now);
+            console.log(`Processed ${processedCount} reminder/reset bill(s)`);
         } catch (error) {
             console.error('Error running minute-by-minute reminder cron job:', error.message);
         }
@@ -125,3 +130,4 @@ const setupCronJobs = () => {
 };
 
 module.exports = setupCronJobs;
+module.exports.processReminderBills = processReminderBills;
