@@ -558,7 +558,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
                         );
-                        if (result == true) bills.fetchBills();
+                        if (result == true && mounted) {
+                          bills.fetchBills();
+                        }
                       },
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 12),

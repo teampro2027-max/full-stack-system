@@ -129,6 +129,11 @@ const updateBill = async (req, res) => {
         req.body.notificationDate = resolvedNotificationDate;
         req.body.startDate = resolvedStartDate;
 
+        if (bill.status === 'paid' && resolvedNotificationDate && resolvedNotificationDate.getTime() <= now.getTime()) {
+            req.body.status = 'unpaid';
+            req.body.lastPaidDate = null;
+        }
+
         const updatedBill = await Bill.findByIdAndUpdate(
             req.params.id,
             req.body,
