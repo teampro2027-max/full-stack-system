@@ -8,7 +8,7 @@ export const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || get
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -24,6 +24,33 @@ api.interceptors.request.use((config) => {
   } catch (_) {}
   return config;
 });
+
+// Auto-retry on network errors (handles Render cold starts & ERR_NETWORK_CHANGED)
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error.config;
+    if (!config) return Promise.reject(error);
+
+    config.__retryCount = config.__retryCount || 0;
+    const isNetworkError = !error.response && (
+      error.code === 'ERR_NETWORK' ||
+      error.code === 'ECONNABORTED' ||
+      error.message?.includes('Network Error') ||
+      error.message?.includes('ERR_NETWORK_CHANGED') ||
+      error.message?.includes('timeout')
+    );
+
+    if (isNetworkError && config.__retryCount < 2) {
+      config.__retryCount += 1;
+      console.log(`Retrying request (${config.__retryCount}/2): ${config.url}`);
+      await new Promise((r) => setTimeout(r, 2000));
+      return api(config);
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 // Auth
 export const loginAdmin = (email, password) =>

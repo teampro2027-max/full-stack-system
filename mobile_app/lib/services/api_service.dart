@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -49,10 +50,32 @@ class ApiService {
     throw Exception(fallback);
   }
 
+  /// Retry wrapper for network errors (handles Render cold starts)
+  static Future<http.Response> _retryRequest(
+    Future<http.Response> Function() request, {
+    int maxRetries = 2,
+  }) async {
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await request().timeout(const Duration(seconds: 60));
+      } catch (e) {
+        final isLast = attempt == maxRetries;
+        final isNetworkError = e.toString().contains('SocketException') ||
+            e.toString().contains('TimeoutException') ||
+            e.toString().contains('Connection') ||
+            e.toString().contains('Network') ||
+            e.toString().contains('HandshakeException');
+        if (isLast || !isNetworkError) rethrow;
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+    }
+    throw Exception('Request failed after retries');
+  }
+
   static Future<dynamic> get(String path) async {
-    final res = await http.get(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
+    final hdrs = await _headers();
+    final res = await _retryRequest(
+      () => http.get(Uri.parse('$baseUrl$path'), headers: hdrs),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return _decodeBody(res);
@@ -61,9 +84,9 @@ class ApiService {
   }
 
   static Future<Uint8List> getBytes(String path) async {
-    final res = await http.get(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
+    final hdrs = await _headers();
+    final res = await _retryRequest(
+      () => http.get(Uri.parse('$baseUrl$path'), headers: hdrs),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return res.bodyBytes;
@@ -72,10 +95,10 @@ class ApiService {
   }
 
   static Future<dynamic> post(String path, Map<String, dynamic> body) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
-      body: json.encode(body),
+    final hdrs = await _headers();
+    final encoded = json.encode(body);
+    final res = await _retryRequest(
+      () => http.post(Uri.parse('$baseUrl$path'), headers: hdrs, body: encoded),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return _decodeBody(res);
@@ -84,10 +107,10 @@ class ApiService {
   }
 
   static Future<dynamic> put(String path, Map<String, dynamic> body) async {
-    final res = await http.put(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
-      body: json.encode(body),
+    final hdrs = await _headers();
+    final encoded = json.encode(body);
+    final res = await _retryRequest(
+      () => http.put(Uri.parse('$baseUrl$path'), headers: hdrs, body: encoded),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return _decodeBody(res);
@@ -96,9 +119,9 @@ class ApiService {
   }
 
   static Future<dynamic> delete(String path) async {
-    final res = await http.delete(
-      Uri.parse('$baseUrl$path'),
-      headers: await _headers(),
+    final hdrs = await _headers();
+    final res = await _retryRequest(
+      () => http.delete(Uri.parse('$baseUrl$path'), headers: hdrs),
     );
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return _decodeBody(res);

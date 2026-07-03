@@ -29,7 +29,11 @@ const Login = () => {
       setAdminUser({ _id, name, email: userEmail, role });
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      if (!err.response) {
+        setError('Server-ku wuu kacayaa (Render cold start). Fadlan dib u isku day 30 ilbiriqsi ka dib. / Server is waking up, please retry in 30 seconds.');
+      } else {
+        setError(err.response?.data?.message || 'Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }
