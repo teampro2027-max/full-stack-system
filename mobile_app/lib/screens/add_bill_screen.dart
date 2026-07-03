@@ -377,7 +377,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
                     children: [
                       // Parent Categories Selector
                       SizedBox(
-                        height: 52,
+                        height: 96,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: parentCategories.length,
@@ -388,6 +388,8 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                 _selectedParentId == cat['_id'] ||
                                 (_selectedParentId.isEmpty &&
                                     _category == cat['key']);
+                            final label = (cat['name'] ?? cat['key'] ?? '')
+                                .toString();
                             return GestureDetector(
                               onTap: () {
                                 final subs = allCategories
@@ -407,15 +409,16 @@ class _AddBillScreenState extends State<AddBillScreen> {
                               },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
+                                width: 96,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 8,
+                                  horizontal: 10,
+                                  vertical: 10,
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelectedParent
                                       ? const Color(0xFF4F46E5)
                                       : Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: isSelectedParent
                                         ? const Color(0xFF4F46E5)
@@ -426,25 +429,30 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                           BoxShadow(
                                             color: const Color(
                                               0xFF4F46E5,
-                                            ).withOpacity(0.25),
+                                            ).withOpacity(0.18),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           ),
                                         ]
                                       : [],
                                 ),
-                                child: Row(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     getCategoryIcon(
                                       cat['icon'] ?? '📋',
                                       color: isSelectedParent
                                           ? Colors.white
                                           : const Color(0xFF4F46E5),
-                                      size: 16,
+                                      size: 22,
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(height: 8),
                                     Text(
-                                      cat['name'],
+                                      label,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         color: isSelectedParent
                                             ? Colors.white
@@ -466,7 +474,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
                         const SizedBox(height: 12),
                         _label('Subcategory'),
                         SizedBox(
-                          height: 48,
+                          height: 96,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: allCategories
@@ -475,7 +483,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                 )
                                 .length,
                             separatorBuilder: (_, __) =>
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 8),
                             itemBuilder: (ctx, i) {
                               final subs = allCategories
                                   .where(
@@ -484,20 +492,23 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                   .toList();
                               final cat = subs[i];
                               final selected = _category == cat['key'];
+                              final label = (cat['name'] ?? cat['key'] ?? '')
+                                  .toString();
                               return GestureDetector(
                                 onTap: () =>
                                     setState(() => _category = cat['key']),
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
+                                  width: 96,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
+                                    horizontal: 10,
+                                    vertical: 10,
                                   ),
                                   decoration: BoxDecoration(
                                     color: selected
                                         ? const Color(0xFF10B981)
                                         : Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(14),
                                     border: Border.all(
                                       color: selected
                                           ? const Color(0xFF10B981)
@@ -508,29 +519,35 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                             BoxShadow(
                                               color: const Color(
                                                 0xFF10B981,
-                                              ).withOpacity(0.2),
+                                              ).withOpacity(0.16),
                                               blurRadius: 6,
                                               offset: const Offset(0, 3),
                                             ),
                                           ]
                                         : [],
                                   ),
-                                  child: Row(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
                                       getCategoryIcon(
                                         cat['icon'] ?? '📋',
                                         color: selected
                                             ? Colors.white
                                             : const Color(0xFF10B981),
-                                        size: 14,
+                                        size: 20,
                                       ),
-                                      const SizedBox(width: 5),
+                                      const SizedBox(height: 8),
                                       Text(
-                                        cat['name'],
+                                        label,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           color: selected
                                               ? Colors.white
-                                              : Colors.grey.shade600,
+                                              : Colors.grey.shade700,
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
                                         ),
