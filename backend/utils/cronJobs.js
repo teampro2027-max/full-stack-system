@@ -72,8 +72,6 @@ const setupCronJobs = () => {
                 }
 
                 const wasPaid = bill.status === 'paid';
-                
-                // If the bill was paid, reset to unpaid and clear lastPaidDate
                 if (wasPaid) {
                     bill.status = 'unpaid';
                     bill.lastPaidDate = null;
@@ -83,7 +81,7 @@ const setupCronJobs = () => {
                 const userEmail = bill.userId.email;
                 
                 const msg = wasPaid
-                    ? `Waqtigii lacag bixinta biilkaaga "${bill.title}" waa la gaaray. Fadlan bixi $${bill.amount}.`
+                    ? `Xasuusin: Biilkaaga "${bill.title}" waa dib u soo shaac-baxay. Hadda waad bixin kartaa ($${bill.amount}).`
                     : `Xasuusin: Biilkaaga "${bill.title}" waxaa la gaaray waqtigii loogu talagalay in la bixiyo ($${bill.amount}).`;
 
                 // In-App Notification

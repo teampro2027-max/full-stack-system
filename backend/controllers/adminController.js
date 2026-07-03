@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Bill = require('../models/Bill');
 const Payment = require('../models/Payment');
 const bcrypt = require('bcryptjs');
+const { resolveBillDates } = require('../utils/billDateUtils');
 
 // ─── Dashboard Stats ─────────────────────────────────────────
 const getDashboardStats = async (req, res) => {
@@ -239,24 +240,21 @@ const adminCreateBill = async (req, res) => {
         const now = new Date();
         const buffer = 5 * 60 * 1000;
 
-        if (notificationDate) {
-            req.body.dueDate = notificationDate;
-            dueDate = notificationDate;
-        }
-        if (!startDate) {
-            req.body.startDate = now;
-            startDate = now;
-        }
+        const resolvedDates = resolveBillDates({ dueDate, notificationDate, startDate, now });
+        const { dueDate: resolvedDueDate, notificationDate: resolvedNotificationDate, startDate: resolvedStartDate } = resolvedDates;
 
-        if (notificationDate && new Date(notificationDate).getTime() < now.getTime() - buffer) {
+        req.body.dueDate = resolvedDueDate;
+        req.body.notificationDate = resolvedNotificationDate;
+        req.body.startDate = resolvedStartDate;
+
+        if (resolvedNotificationDate && resolvedNotificationDate.getTime() < now.getTime() - buffer) {
             return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
         }
 
-        const startVal = startDate ? new Date(startDate) : now;
-        if (dueDate && new Date(dueDate).getTime() < startVal.getTime()) {
+        if (resolvedDueDate && resolvedDueDate.getTime() < resolvedStartDate.getTime()) {
             return res.status(400).json({ message: 'Due date must be after the start date' });
         }
-        if (notificationDate && new Date(notificationDate).getTime() < startVal.getTime()) {
+        if (resolvedNotificationDate && resolvedNotificationDate.getTime() < resolvedStartDate.getTime()) {
             return res.status(400).json({ message: 'Notification date must be after the start date' });
         }
 
@@ -288,24 +286,29 @@ const adminUpdateBill = async (req, res) => {
         const now = new Date();
         const buffer = 5 * 60 * 1000;
 
-        if (req.body.notificationDate) {
-            req.body.dueDate = req.body.notificationDate;
-        }
+        const resolvedDates = resolveBillDates({
+            dueDate: req.body.dueDate,
+            notificationDate: req.body.notificationDate,
+            startDate: req.body.startDate,
+            now,
+            existingDueDate: bill.dueDate,
+        });
+        const { dueDate: resolvedDueDate, notificationDate: resolvedNotificationDate, startDate: resolvedStartDate } = resolvedDates;
 
-        if (req.body.notificationDate && new Date(req.body.notificationDate).getTime() < now.getTime() - buffer) {
+        if (resolvedNotificationDate && resolvedNotificationDate.getTime() < now.getTime() - buffer) {
             return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
         }
 
-        const startVal = req.body.startDate ? new Date(req.body.startDate) : new Date(bill.startDate);
-        const dueVal = req.body.dueDate ? new Date(req.body.dueDate) : new Date(bill.dueDate);
-        const notifVal = req.body.notificationDate ? new Date(req.body.notificationDate) : (bill.notificationDate ? new Date(bill.notificationDate) : null);
-
-        if (dueVal && startVal && dueVal.getTime() < startVal.getTime()) {
+        if (resolvedDueDate && resolvedDueDate.getTime() < resolvedStartDate.getTime()) {
             return res.status(400).json({ message: 'Due date must be after the start date' });
         }
-        if (notifVal && startVal && notifVal.getTime() < startVal.getTime()) {
+        if (resolvedNotificationDate && resolvedNotificationDate.getTime() < resolvedStartDate.getTime()) {
             return res.status(400).json({ message: 'Notification date must be after the start date' });
         }
+
+        req.body.dueDate = resolvedDueDate;
+        req.body.notificationDate = resolvedNotificationDate;
+        req.body.startDate = resolvedStartDate;
 
         const updatedBill = await Bill.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedBill);

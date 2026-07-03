@@ -320,22 +320,27 @@ const BillsManagement = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Amount ($)</label><input type="number" className="input" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})}/></div>
                 <div>
-                  <label className="label">Reminder Date & Time</label>
+                  <label className="label">Due Date</label>
                   <input
                     type="datetime-local"
                     className="input"
-                    value={form.notificationDate}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setForm({
-                        ...form,
-                        notificationDate: val,
-                        dueDate: val,
-                        startDate: form.startDate || new Date().toISOString().slice(0, 16)
-                      });
-                    }}
+                    value={form.dueDate}
+                    onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
                   />
                 </div>
+              </div>
+              <div>
+                <label className="label">Reminder Date & Time</label>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={form.notificationDate}
+                  onChange={(e) => setForm({
+                    ...form,
+                    notificationDate: e.target.value,
+                    startDate: form.startDate || new Date().toISOString().slice(0, 16)
+                  })}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

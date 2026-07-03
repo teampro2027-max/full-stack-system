@@ -58,7 +58,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             e.toString().toLowerCase().contains('xanibay') ||
             e.toString().toLowerCase().contains('firfircoona')) {
           timer.cancel();
-          final status = e.toString().toLowerCase().contains('firfircoona') ? 'inactive' : 'suspended';
+          final status = e.toString().toLowerCase().contains('firfircoona')
+              ? 'inactive'
+              : 'suspended';
           _showSuspensionDialog(status);
         }
       }
@@ -74,15 +76,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return PopScope(
           canPop: false,
           child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Row(
               children: [
                 const Icon(Icons.block, color: Colors.red, size: 28),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    status == 'suspended' ? 'Akaunkaaga waa la xanibay!' : 'Akaunkaaga ma firfircoona!',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red),
+                    status == 'suspended'
+                        ? 'Akaunkaaga waa la xanibay!'
+                        : 'Akaunkaaga ma firfircoona!',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.red,
+                    ),
                   ),
                 ),
               ],
@@ -96,19 +106,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
             actions: [
               ElevatedButton.icon(
                 onPressed: () async {
-                  await Provider.of<AuthProvider>(context, listen: false).logout();
+                  await Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  ).logout();
                   if (!ctx.mounted) return;
                   Navigator.of(ctx).pop();
-                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/login', (route) => false);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: const Icon(Icons.logout, size: 16),
-                label: const Text('Ka Bax (Log Out)', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Ka Bax (Log Out)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
@@ -324,7 +344,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: const Icon(Icons.refresh, color: Colors.white),
               onPressed: () {
                 Provider.of<BillProvider>(context, listen: false).fetchBills();
-                Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+                Provider.of<NotificationProvider>(
+                  context,
+                  listen: false,
+                ).fetchNotifications();
               },
             ),
             Consumer<NotificationProvider>(
@@ -432,7 +455,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         SliverList(
           delegate: SliverChildBuilderDelegate((ctx, i) {
             final bill = upcoming[i];
-            final meta = getCategoryMeta(context, bill['category'] ?? '', _categoryMeta);
+            final meta = getCategoryMeta(
+              context,
+              bill['category'] ?? '',
+              _categoryMeta,
+            );
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: _billCard(ctx, lang, bill, meta),
@@ -477,7 +504,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 itemCount: bills.bills.length,
                 itemBuilder: (ctx, i) {
                   final bill = bills.bills[i];
-                  final meta = getCategoryMeta(context, bill['category'] ?? '', _categoryMeta);
+                  final meta = getCategoryMeta(
+                    context,
+                    bill['category'] ?? '',
+                    _categoryMeta,
+                  );
                   return Dismissible(
                     key: Key(bill['_id']),
                     direction: DismissDirection.endToStart,
@@ -657,10 +688,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _advancedDrawerController.hideDrawer();
     Future.delayed(const Duration(milliseconds: 220), () {
       if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => screen),
-      );
+      Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
     });
   }
 
@@ -708,10 +736,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: meta['image'] != null && meta['image'].toString().isNotEmpty
+              child:
+                  meta['image'] != null && meta['image'].toString().isNotEmpty
                   ? Image.network(
                       'https://full-stack-system-1ex6.onrender.com${meta['image']}',
                       fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: getCategoryIcon(
+                            meta['icon'] as String? ?? '📋',
+                            color: (meta['color'] as Color),
+                            size: 24,
+                          ),
+                        );
+                      },
                       errorBuilder: (_, __, ___) => Center(
                         child: getCategoryIcon(
                           meta['icon'] as String? ?? '📋',
@@ -837,9 +876,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => AddBillScreen(
-              existingBill: Map<String, dynamic>.from(bill),
-            ),
+            builder: (_) =>
+                AddBillScreen(existingBill: Map<String, dynamic>.from(bill)),
           ),
         );
         if (result == true) {
