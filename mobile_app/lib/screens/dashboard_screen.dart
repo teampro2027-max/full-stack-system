@@ -23,10 +23,12 @@ class DashboardScreen extends StatefulWidget {
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final _advancedDrawerController = AdvancedDrawerController();
   int _currentIndex = 0;
+  Timer? _refreshTimer;
 
   final Map<String, Map<String, dynamic>> _categoryMeta = {
     'electricity': {'icon': '⚡', 'color': Color(0xFFF59E0B)},
@@ -65,6 +67,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
     });
+  }
+
+  void _startBillRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted) return;
+      Provider.of<BillProvider>(context, listen: false).fetchBills();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      Provider.of<BillProvider>(context, listen: false).fetchBills();
+      Provider.of<NotificationProvider>(
+        context,
+        listen: false,
+      ).fetchNotifications();
+    }
   }
 
   void _showSuspensionDialog(String status) {
@@ -140,6 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {
       Provider.of<BillProvider>(context, listen: false).fetchBills();
       Provider.of<NotificationProvider>(
@@ -148,11 +170,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ).fetchNotifications();
     });
     _startStatusCheck();
+    _startBillRefresh();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _statusTimer?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 

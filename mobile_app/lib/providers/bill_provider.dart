@@ -10,13 +10,16 @@ class BillProvider with ChangeNotifier {
   List<dynamic> get categories => _categories;
   bool get isLoading => _isLoading;
 
-  List<dynamic> get upcomingBills => _bills
-      .where((b) => b['status'] == 'unpaid')
-      .toList()
-    ..sort((a, b) => DateTime.parse(a['dueDate']).compareTo(DateTime.parse(b['dueDate'])));
+  List<dynamic> get upcomingBills =>
+      _bills.where((b) => b['status'] != 'paid').toList()..sort(
+        (a, b) => DateTime.parse(
+          a['dueDate'],
+        ).compareTo(DateTime.parse(b['dueDate'])),
+      );
 
-  List<dynamic> get overdueBills => _bills.where((b) => b['status'] == 'overdue').toList();
-  
+  List<dynamic> get overdueBills =>
+      _bills.where((b) => b['status'] == 'overdue').toList();
+
   double get totalDue => _bills
       .where((b) => b['status'] != 'paid')
       .fold(0.0, (sum, b) => sum + (b['amount'] as num).toDouble());
@@ -63,11 +66,16 @@ class BillProvider with ChangeNotifier {
       await ApiService.put('/bills/$id', data);
     } catch (_) {}
     final idx = _bills.indexWhere((b) => b['_id'] == id);
-    if (idx != -1) { _bills[idx] = {..._bills[idx], ...data}; notifyListeners(); }
+    if (idx != -1) {
+      _bills[idx] = {..._bills[idx], ...data};
+      notifyListeners();
+    }
   }
 
   Future<void> deleteBill(String id) async {
-    try { await ApiService.delete('/bills/$id'); } catch (_) {}
+    try {
+      await ApiService.delete('/bills/$id');
+    } catch (_) {}
     _bills.removeWhere((b) => b['_id'] == id);
     notifyListeners();
   }
