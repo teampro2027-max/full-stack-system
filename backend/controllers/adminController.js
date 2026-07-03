@@ -228,23 +228,46 @@ const adminGetBills = async (req, res) => {
 
 const adminCreateBill = async (req, res) => {
     try {
-        const { title, amount } = req.body;
+        const { title, amount, startDate, dueDate, notificationDate } = req.body;
         if (!title || !/^[a-zA-Z\s]+$/.test(title.trim())) {
             return res.status(400).json({ message: 'Title must contain only letters and spaces' });
         }
         if (amount === undefined || isNaN(amount) || Number(amount) <= 0) {
             return res.status(400).json({ message: 'Amount must be a valid number greater than 0' });
         }
+
+        const now = new Date();
+        const buffer = 5 * 60 * 1000;
+
+        if (startDate && new Date(startDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Start date and time cannot be in the past' });
+        }
+        if (dueDate && new Date(dueDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Due date and time cannot be in the past' });
+        }
+        if (notificationDate && new Date(notificationDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
+        }
+
+        const startVal = startDate ? new Date(startDate) : now;
+        if (dueDate && new Date(dueDate).getTime() < startVal.getTime()) {
+            return res.status(400).json({ message: 'Due date must be after the start date' });
+        }
+        if (notificationDate && new Date(notificationDate).getTime() < startVal.getTime()) {
+            return res.status(400).json({ message: 'Notification date must be after the start date' });
+        }
+
         const bill = await Bill.create(req.body);
         res.status(201).json(bill);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
 
 const adminUpdateBill = async (req, res) => {
     try {
-        const { title, amount } = req.body;
+        const { title, amount, startDate, dueDate, notificationDate } = req.body;
         if (title) {
             if (!/^[a-zA-Z\s]+$/.test(title.trim())) {
                 return res.status(400).json({ message: 'Title must contain only letters and spaces' });
@@ -255,10 +278,38 @@ const adminUpdateBill = async (req, res) => {
                 return res.status(400).json({ message: 'Amount must be a valid number greater than 0' });
             }
         }
-        const bill = await Bill.findByIdAndUpdate(req.params.id, req.body, { new: true });
+
+        const bill = await Bill.findById(req.params.id);
         if (!bill) return res.status(404).json({ message: 'Bill not found' });
-        res.json(bill);
+
+        const now = new Date();
+        const buffer = 5 * 60 * 1000;
+
+        if (startDate && new Date(startDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Start date and time cannot be in the past' });
+        }
+        if (dueDate && new Date(dueDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Due date and time cannot be in the past' });
+        }
+        if (notificationDate && new Date(notificationDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
+        }
+
+        const startVal = startDate ? new Date(startDate) : new Date(bill.startDate);
+        const dueVal = dueDate ? new Date(dueDate) : new Date(bill.dueDate);
+        const notifVal = notificationDate ? new Date(notificationDate) : (bill.notificationDate ? new Date(bill.notificationDate) : null);
+
+        if (dueVal && startVal && dueVal.getTime() < startVal.getTime()) {
+            return res.status(400).json({ message: 'Due date must be after the start date' });
+        }
+        if (notifVal && startVal && notifVal.getTime() < startVal.getTime()) {
+            return res.status(400).json({ message: 'Notification date must be after the start date' });
+        }
+
+        const updatedBill = await Bill.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(updatedBill);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };

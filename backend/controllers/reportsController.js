@@ -183,4 +183,31 @@ const exportPhonePDF = async (req, res) => {
     }
 };
 
-module.exports = { monthlyReport, categoryReport, exportPDF, getAuditLogs, getPhoneReport, exportPhonePDF };
+// GET /api/reports/users-activity (admin only)
+const getUsersActivityReport = async (req, res) => {
+    try {
+        const users = await User.find({ role: 'user' }).select('-password -mfaSecret');
+        const report = await Promise.all(users.map(async (user) => {
+            const daysActive = Math.max(1, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24)));
+            const totalBills = await Bill.countDocuments({ userId: user._id });
+            const paidBills = await Bill.countDocuments({ userId: user._id, status: 'paid' });
+            return {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone || '—',
+                status: user.status,
+                createdAt: user.createdAt,
+                daysActive,
+                totalBills,
+                paidBills
+            };
+        }));
+        res.json({ users: report });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { monthlyReport, categoryReport, exportPDF, getAuditLogs, getPhoneReport, exportPhonePDF, getUsersActivityReport };

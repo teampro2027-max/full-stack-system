@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 import '../utils/download_helper.dart';
@@ -26,6 +27,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _searchingPhone = false;
   Map<String, dynamic>? _phoneReportData;
 
+  // User activity state
+  List<dynamic> _userActivityList = [];
+  bool _loadingUserActivity = false;
+  final TextEditingController _userSearchController = TextEditingController();
+  String _userQuery = '';
+
   final List<String> _months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -37,6 +44,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _selectedYear = now.year;
     _selectedMonth = now.month;
     _fetchReport();
+
+    Future.microtask(() {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.user?['role'] == 'admin') {
+        _fetchUserActivity();
+      }
+    });
+  }
+
+  Future<void> _fetchUserActivity() async {
+    setState(() => _loadingUserActivity = true);
+    try {
+      final data = await ApiService.get('/reports/users-activity');
+      if (mounted) {
+        setState(() {
+          _userActivityList = data['users'] ?? [];
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load user activity report')));
+      }
+    } finally {
+      if (mounted) setState(() => _loadingUserActivity = false);
+    }
   }
 
   Future<void> _fetchReport() async {
@@ -100,21 +132,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final lang = Provider.of<LanguageProvider>(context);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final isAdmin = auth.user?['role'] == 'admin';
 
     return DefaultTabController(
-      length: 2,
+      length: isAdmin ? 3 : 2,
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
           title: Text(lang.t('reports'), style: const TextStyle(fontWeight: FontWeight.bold)),
-          bottom: const TabBar(
+          bottom: TabBar(
             isScrollable: true,
             tabs: [
-              Tab(text: 'Warbixin Guud', icon: Icon(Icons.analytics_outlined)),
-              Tab(text: 'Baar Nambar', icon: Icon(Icons.phone_android)),
+              const Tab(text: 'Warbixin Guud', icon: Icon(Icons.analytics_outlined)),
+              const Tab(text: 'Baar Nambar', icon: Icon(Icons.phone_android)),
+              if (isAdmin) const Tab(text: 'Macaamiisha (Users)', icon: Icon(Icons.people_outline)),
             ],
-            indicatorColor: Colors.white,
-            labelStyle: TextStyle(fontWeight: FontWeight.bold),
+            indicatorColor: const Color(0xFF4F46E5),
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
         body: TabBarView(
@@ -123,9 +158,149 @@ class _ReportsScreenState extends State<ReportsScreen> {
             _buildGeneralTab(),
             // Phone Search Tab
             _buildPhoneSearchTab(),
+            if (isAdmin) _buildUserActivityTab(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildUserActivityTab() {
+    final filtered = _userActivityList.where((u) {
+      final name = (u['name'] ?? '').toString().toLowerCase();
+      final email = (u['email'] ?? '').toString().toLowerCase();
+      final phone = (u['phone'] ?? '').toString().toLowerCase();
+      final q = _userQuery.toLowerCase();
+      return name.contains(q) || email.contains(q) || phone.contains(q);
+    }).toList();
+
+    return Column(
+      children: [
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextField(
+            controller: _userSearchController,
+            onChanged: (val) => setState(() => _userQuery = val),
+            decoration: InputDecoration(
+              hintText: 'Raadi magac, email ama nambar...',
+              prefixIcon: const Icon(Icons.search),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        
+        Expanded(
+          child: _loadingUserActivity
+              ? const Center(child: CircularProgressIndicator())
+              : filtered.isEmpty
+                  ? const Center(child: Text('Ma jiraan isticmaalayaal la helay.'))
+                  : RefreshIndicator(
+                      onRefresh: _fetchUserActivity,
+                      child: ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (ctx, i) {
+                          final u = filtered[i];
+                          final status = u['status'] ?? 'active';
+                          final daysActive = u['daysActive'] ?? 0;
+                          final totalBills = u['totalBills'] ?? 0;
+                          final paidBills = u['paidBills'] ?? 0;
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: Colors.grey.shade100),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          u['name'] ?? '—',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: status == 'active'
+                                              ? Colors.green.shade50
+                                              : status == 'suspended'
+                                                  ? Colors.red.shade50
+                                                  : Colors.amber.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          status.toUpperCase(),
+                                          style: TextStyle(
+                                            color: status == 'active'
+                                                ? Colors.green
+                                                : status == 'suspended'
+                                                    ? Colors.red
+                                                    : Colors.amber,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${u['email'] ?? ''} • ${u['phone'] ?? ''}',
+                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                  ),
+                                  const Divider(height: 24),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Waqtiga Diiwangelinta',
+                                            style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Days: $daysActive ${daysActive == 1 ? 'maalin' : 'maalmood'}',
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            'Biilal & Bixis',
+                                            style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Total: $totalBills | Paid: $paidBills',
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.indigo),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+        ),
+      ],
     );
   }
 

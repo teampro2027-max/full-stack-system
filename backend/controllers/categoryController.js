@@ -11,20 +11,36 @@ const getCategories = async (req, res) => {
 
 const createCategory = async (req, res) => {
     try {
-        const { name, icon, color, active } = req.body;
+        const { name, icon, color, active, parentId } = req.body;
         if (!name || !/^[a-zA-Z\s]+$/.test(name.trim())) {
             return res.status(400).json({ message: 'Category name can only contain letters and spaces' });
         }
-        const key = name.trim().toLowerCase().replace(/\s+/g, '_');
+        
+        let key = name.trim().toLowerCase().replace(/\s+/g, '_');
+        if (parentId) {
+            const parent = await Category.findById(parentId);
+            if (!parent) {
+                return res.status(400).json({ message: 'Parent category not found' });
+            }
+            key = `${parent.key}_${key}`;
+        }
         
         const exists = await Category.findOne({ key });
         if (exists) {
             return res.status(400).json({ message: 'Category already exists' });
         }
 
-        const category = await Category.create({ name: name.trim(), key, icon, color, active });
+        const categoryData = { name: name.trim(), key, icon, color, active, parentId: parentId || null };
+
+        // Handle uploaded image
+        if (req.file) {
+            categoryData.image = `/uploads/${req.file.filename}`;
+        }
+
+        const category = await Category.create(categoryData);
         res.status(201).json(category);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -38,7 +54,23 @@ const updateCategory = async (req, res) => {
                 return res.status(400).json({ message: 'Category name can only contain letters and spaces' });
             }
             updates.name = name.trim();
-            updates.key = name.trim().toLowerCase().replace(/\s+/g, '_');
+            
+            const current = await Category.findById(req.params.id);
+            if (current && current.parentId) {
+                const parent = await Category.findById(current.parentId);
+                if (parent) {
+                    updates.key = `${parent.key}_${name.trim().toLowerCase().replace(/\s+/g, '_')}`;
+                } else {
+                    updates.key = name.trim().toLowerCase().replace(/\s+/g, '_');
+                }
+            } else {
+                updates.key = name.trim().toLowerCase().replace(/\s+/g, '_');
+            }
+        }
+
+        // Handle uploaded image
+        if (req.file) {
+            updates.image = `/uploads/${req.file.filename}`;
         }
 
         const category = await Category.findByIdAndUpdate(req.params.id, updates, { new: true });

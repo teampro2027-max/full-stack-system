@@ -19,7 +19,12 @@ class _AddBillScreenState extends State<AddBillScreen> {
   final _notesController = TextEditingController();
 
   String _category = '';
+  String _selectedParentId = '';
+  DateTime _startDate = DateTime.now();
   DateTime _dueDate = DateTime.now().add(const Duration(days: 7));
+  DateTime? _notificationDate;
+  bool _setReminder = false;
+
   bool _isRecurring = false;
   String _recurringInterval = 'monthly';
   bool _loading = false;
@@ -40,13 +45,30 @@ class _AddBillScreenState extends State<AddBillScreen> {
       if (b['dueDate'] != null) {
         _dueDate = DateTime.tryParse(b['dueDate']) ?? _dueDate;
       }
+      if (b['startDate'] != null) {
+        _startDate = DateTime.tryParse(b['startDate']) ?? _startDate;
+      }
+      if (b['notificationDate'] != null) {
+        _notificationDate = DateTime.tryParse(b['notificationDate']);
+        _setReminder = _notificationDate != null;
+      }
     }
-    // Ensure categories are loaded (in case screen was opened without visiting dashboard)
+    // Ensure categories are loaded and find parentId if editing a subcategory
     Future.microtask(() {
       final provider = Provider.of<BillProvider>(context, listen: false);
-      if (provider.categories.isEmpty) {
-        provider.fetchCategories();
-      }
+      provider.fetchCategories().then((_) {
+        if (mounted && _category.isNotEmpty) {
+          final cat = provider.categories.firstWhere(
+            (c) => c['key'] == _category,
+            orElse: () => null,
+          );
+          if (cat != null && cat['parentId'] != null) {
+            setState(() {
+              _selectedParentId = cat['parentId'];
+            });
+          }
+        }
+      });
     });
   }
 
@@ -59,11 +81,11 @@ class _AddBillScreenState extends State<AddBillScreen> {
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
+  Future<DateTime?> _pickDateTime(DateTime initialDateTime) async {
+    final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _dueDate,
-      firstDate: DateTime.now(),
+      initialDate: initialDateTime,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
@@ -72,17 +94,80 @@ class _AddBillScreenState extends State<AddBillScreen> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _dueDate = picked);
+    if (pickedDate == null) return null;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initialDateTime),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: Color(0xFF4F46E5)),
+        ),
+        child: child!,
+      ),
+    );
+    if (pickedTime == null) return null;
+
+    return DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_category.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fadlan dooro category ama subcategory')),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final buffer = const Duration(minutes: 5);
+
+    if (_startDate.isBefore(now.subtract(buffer))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Start date and time cannot be in the past')),
+      );
+      return;
+    }
+    if (_dueDate.isBefore(now.subtract(buffer))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Due date and time cannot be in the past')),
+      );
+      return;
+    }
+    if (_setReminder && _notificationDate != null && _notificationDate!.isBefore(now.subtract(buffer))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notification date and time cannot be in the past')),
+      );
+      return;
+    }
+    if (_dueDate.isBefore(_startDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Due date must be after the start date')),
+      );
+      return;
+    }
+    if (_setReminder && _notificationDate != null && _notificationDate!.isBefore(_startDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notification date must be after the start date')),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
 
     final data = {
       'title': _titleController.text.trim(),
       'amount': double.parse(_amountController.text),
       'dueDate': _dueDate.toIso8601String(),
+      'startDate': _startDate.toIso8601String(),
+      'notificationDate': _setReminder && _notificationDate != null ? _notificationDate!.toIso8601String() : null,
       'category': _category,
       'isRecurring': _isRecurring,
       'recurringInterval': _recurringInterval,
@@ -179,7 +264,15 @@ class _AddBillScreenState extends State<AddBillScreen> {
                           
                           for (final cat in categories) {
                             if (text.contains(cat['name'].toString().toLowerCase())) { 
-                              setState(() => _category = cat['key']); 
+                              setState(() {
+                                if (cat['parentId'] != null) {
+                                  _selectedParentId = cat['parentId'];
+                                  _category = cat['key'];
+                                } else {
+                                  _selectedParentId = '';
+                                  _category = cat['key'];
+                                }
+                              }); 
                               break; 
                             }
                           }
@@ -215,54 +308,139 @@ class _AddBillScreenState extends State<AddBillScreen> {
               _label(lang.t('category')),
               Consumer<BillProvider>(
                 builder: (context, provider, child) {
-                  final categories = provider.categories;
-                  if (categories.isEmpty) {
+                  final allCategories = provider.categories;
+                  final parentCategories = allCategories.where((c) => c['parentId'] == null).toList();
+
+                  if (parentCategories.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text('No categories available', style: TextStyle(color: Colors.grey)),
                     );
                   }
-                  
-                  if (_category.isEmpty && categories.isNotEmpty) {
-                    // Set initial category if empty
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) setState(() => _category = categories[0]['key']);
-                    });
-                  }
 
-                  return SizedBox(
-                    height: 52,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: categories.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (ctx, i) {
-                        final cat = categories[i];
-                        final selected = _category == cat['key'];
-                        return GestureDetector(
-                          onTap: () => setState(() => _category = cat['key']),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: selected ? const Color(0xFF4F46E5) : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: selected ? const Color(0xFF4F46E5) : Colors.grey.shade200),
-                              boxShadow: selected ? [BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4))] : [],
-                            ),
-                            child: Row(children: [
-                              getCategoryIcon(
-                                cat['icon'] ?? '📋',
-                                color: selected ? Colors.white : const Color(0xFF4F46E5),
-                                size: 16,
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Parent Categories Selector
+                      SizedBox(
+                        height: 52,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: parentCategories.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (ctx, i) {
+                            final cat = parentCategories[i];
+                            final isSelectedParent = _selectedParentId == cat['_id'] || (_selectedParentId.isEmpty && _category == cat['key']);
+                            return GestureDetector(
+                              onTap: () {
+                                final subs = allCategories.where((c) => c['parentId'] == cat['_id']).toList();
+                                if (subs.isNotEmpty) {
+                                  setState(() {
+                                    _selectedParentId = cat['_id'];
+                                    _category = ''; // must select subcategory
+                                  });
+                                } else {
+                                  setState(() {
+                                    _selectedParentId = '';
+                                    _category = cat['key'];
+                                  });
+                                }
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelectedParent ? const Color(0xFF4F46E5) : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: isSelectedParent ? const Color(0xFF4F46E5) : Colors.grey.shade200),
+                                  boxShadow: isSelectedParent ? [BoxShadow(color: const Color(0xFF4F46E5).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4))] : [],
+                                ),
+                                child: Row(children: [
+                                  cat['image'] != null && cat['image'].toString().isNotEmpty
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: Image.network(
+                                            'https://full-stack-system-1ex6.onrender.com${cat['image']}',
+                                            width: 16,
+                                            height: 16,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => getCategoryIcon(
+                                              cat['icon'] ?? '📋',
+                                              color: isSelectedParent ? Colors.white : const Color(0xFF4F46E5),
+                                              size: 16,
+                                            ),
+                                          ),
+                                        )
+                                      : getCategoryIcon(
+                                          cat['icon'] ?? '📋',
+                                          color: isSelectedParent ? Colors.white : const Color(0xFF4F46E5),
+                                          size: 16,
+                                        ),
+                                  const SizedBox(width: 6),
+                                  Text(cat['name'], style: TextStyle(color: isSelectedParent ? Colors.white : Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w600)),
+                                ]),
                               ),
-                              const SizedBox(width: 6),
-                              Text(cat['name'], style: TextStyle(color: selected ? Colors.white : Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.w600)),
-                            ]),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Subcategories Selector (if parent has subcategories)
+                      if (_selectedParentId.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _label('Subcategory'),
+                        SizedBox(
+                          height: 48,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: allCategories.where((c) => c['parentId'] == _selectedParentId).length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 6),
+                            itemBuilder: (ctx, i) {
+                              final subs = allCategories.where((c) => c['parentId'] == _selectedParentId).toList();
+                              final cat = subs[i];
+                              final selected = _category == cat['key'];
+                              return GestureDetector(
+                                onTap: () => setState(() => _category = cat['key']),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: selected ? const Color(0xFF10B981) : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: selected ? const Color(0xFF10B981) : Colors.grey.shade200),
+                                    boxShadow: selected ? [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 3))] : [],
+                                  ),
+                                  child: Row(children: [
+                                    cat['image'] != null && cat['image'].toString().isNotEmpty
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(4),
+                                            child: Image.network(
+                                              'https://full-stack-system-1ex6.onrender.com${cat['image']}',
+                                              width: 14,
+                                              height: 14,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => getCategoryIcon(
+                                                cat['icon'] ?? '📋',
+                                                color: selected ? Colors.white : const Color(0xFF10B981),
+                                                size: 14,
+                                              ),
+                                            ),
+                                          )
+                                        : getCategoryIcon(
+                                            cat['icon'] ?? '📋',
+                                            color: selected ? Colors.white : const Color(0xFF10B981),
+                                            size: 14,
+                                          ),
+                                    const SizedBox(width: 5),
+                                    Text(cat['name'], style: TextStyle(color: selected ? Colors.white : Colors.grey.shade600, fontSize: 11, fontWeight: FontWeight.w600)),
+                                  ]),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      ],
+                    ],
                   );
                 }
               ),
@@ -285,24 +463,146 @@ class _AddBillScreenState extends State<AddBillScreen> {
                     },
                   ),
                 ])),
-                const SizedBox(width: 16),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  _label(lang.t('dueDate')),
-                  GestureDetector(
-                    onTap: _pickDate,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200)),
-                      child: Row(children: [
-                        const Icon(Icons.calendar_today, size: 16, color: Colors.indigo),
-                        const SizedBox(width: 8),
-                        Text('${_dueDate.day}/${_dueDate.month}/${_dueDate.year}', style: const TextStyle(fontSize: 13)),
-                      ]),
+              ]),
+              const SizedBox(height: 16),
+
+              // Dates: Start Date & Due Date
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _label('Start Date & Time'),
+                        GestureDetector(
+                          onTap: () async {
+                            final dt = await _pickDateTime(_startDate);
+                            if (dt != null) setState(() => _startDate = dt);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.access_time, size: 14, color: Colors.indigo),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '${_startDate.day}/${_startDate.month}/${_startDate.year} ${_startDate.hour.toString().padLeft(2, '0')}:${_startDate.minute.toString().padLeft(2, '0')}',
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ])),
-              ]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _label('Due Date & Time'),
+                        GestureDetector(
+                          onTap: () async {
+                            final dt = await _pickDateTime(_dueDate);
+                            if (dt != null) setState(() => _dueDate = dt);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today, size: 14, color: Colors.indigo),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '${_dueDate.day}/${_dueDate.month}/${_dueDate.year} ${_dueDate.hour.toString().padLeft(2, '0')}:${_dueDate.minute.toString().padLeft(2, '0')}',
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Notification Reminder
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade100),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Set Notification Reminder', style: TextStyle(fontWeight: FontWeight.w600)),
+                        Switch(
+                          value: _setReminder,
+                          onChanged: (v) {
+                            setState(() {
+                              _setReminder = v;
+                              if (v && _notificationDate == null) {
+                                _notificationDate = DateTime.now().add(const Duration(days: 6));
+                              }
+                            });
+                          },
+                          activeColor: const Color(0xFF4F46E5),
+                        ),
+                      ],
+                    ),
+                    if (_setReminder && _notificationDate != null) ...[
+                      const Divider(height: 16),
+                      GestureDetector(
+                        onTap: () async {
+                          final dt = await _pickDateTime(_notificationDate!);
+                          if (dt != null) setState(() => _notificationDate = dt);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.notifications_active, size: 14, color: Colors.indigo),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${_notificationDate!.day}/${_notificationDate!.month}/${_notificationDate!.year} ${_notificationDate!.hour.toString().padLeft(2, '0')}:${_notificationDate!.minute.toString().padLeft(2, '0')}',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
 
               Container(

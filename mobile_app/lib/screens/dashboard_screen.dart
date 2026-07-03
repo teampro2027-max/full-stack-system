@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_advanced_drawer/flutter_advanced_drawer.dart';
+import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/bill_provider.dart';
 import '../providers/language_provider.dart';
@@ -39,6 +41,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'government_license': {'icon': '📋', 'color': Color(0xFF14B8A6)},
   };
 
+  Timer? _statusTimer;
+
+  void _startStatusCheck() {
+    _statusTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      try {
+        final profile = await ApiService.get('/users/profile');
+        final status = profile['status'] ?? 'active';
+        if (status == 'suspended' || status == 'inactive') {
+          timer.cancel();
+          _showSuspensionDialog(status);
+        }
+      } catch (e) {
+        if (e.toString().contains('403') ||
+            e.toString().toLowerCase().contains('forbidden') ||
+            e.toString().toLowerCase().contains('xanibay') ||
+            e.toString().toLowerCase().contains('firfircoona')) {
+          timer.cancel();
+          final status = e.toString().toLowerCase().contains('firfircoona') ? 'inactive' : 'suspended';
+          _showSuspensionDialog(status);
+        }
+      }
+    });
+  }
+
+  void _showSuspensionDialog(String status) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.shield_alert, color: Colors.red, size: 28),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    status == 'suspended' ? 'Akaunkaaga waa la xanibay!' : 'Akaunkaaga ma firfircoona!',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              status == 'suspended'
+                  ? 'Koontadaada waa la xanibay (Suspended). Fadlan la xiriir maamulaha nidaamka si aad u hesho caawimaad.'
+                  : 'Koontadaada hadda ma firfircoona (Inactive). Fadlan la xiriir maamulaha nidaamka si loo hawlgeliyo.',
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            actions: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await Provider.of<AuthProvider>(context, listen: false).logout();
+                  if (!ctx.mounted) return;
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.logout, size: 16),
+                label: const Text('Ka Bax (Log Out)', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +127,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         listen: false,
       ).fetchNotifications();
     });
+    _startStatusCheck();
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
   }
 
   String _daysLeft(String? dateStr) {

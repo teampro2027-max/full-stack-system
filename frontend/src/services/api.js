@@ -64,12 +64,17 @@ export const getAdminUsers = (params) => api.get('/admin/users', { params });
 export const createAdminUser = (data) => api.post('/admin/users', data);
 export const updateAdminUser = (id, data) => api.put(`/admin/users/${id}`, data);
 export const deleteAdminUser = (id) => api.delete(`/admin/users/${id}`);
+export const getMyProfile = () => api.get('/users/profile');
 
 // Bills
 export const getAdminBills = (params) => api.get('/admin/bills', { params });
 export const createAdminBill = (data) => api.post('/admin/bills', data);
 export const updateAdminBill = (id, data) => api.put(`/admin/bills/${id}`, data);
 export const deleteAdminBill = (id) => api.delete(`/admin/bills/${id}`);
+export const getUserBills = (params) => api.get('/bills', { params });
+export const createUserBill = (data) => api.post('/bills', data);
+export const updateUserBill = (id, data) => api.put(`/bills/${id}`, data);
+export const deleteUserBill = (id) => api.delete(`/bills/${id}`);
 
 // Payments
 export const getAdminPayments = (params) => api.get('/admin/payments', { params });
@@ -78,8 +83,31 @@ export const rejectPayment = (id) => api.put(`/admin/payments/${id}/reject`);
 
 // Categories
 export const getCategories = () => api.get('/categories');
-export const createCategory = (data) => api.post('/categories', data);
-export const updateCategory = (id, data) => api.put(`/categories/${id}`, data);
+export const createCategory = (data) => {
+  const formData = new FormData();
+  Object.keys(data).forEach(key => {
+    if (data[key] !== undefined && data[key] !== null) {
+      formData.append(key, data[key]);
+    }
+  });
+  return api.post('/categories', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+export const updateCategory = (id, data) => {
+  const formData = new FormData();
+  Object.keys(data).forEach(key => {
+    if (data[key] !== undefined && data[key] !== null) {
+      formData.append(key, data[key]);
+    }
+  });
+  return api.put(`/categories/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 export const deleteCategory = (id) => api.delete(`/categories/${id}`);
+
+// Reports
+export const getUsersActivityReport = () => api.get('/reports/users-activity');
 
 export default api;

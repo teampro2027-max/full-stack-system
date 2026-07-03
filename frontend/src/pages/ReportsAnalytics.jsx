@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, DollarSign, Users, FileText, Download, RefreshCw, AlertTriangle } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, FileText, Download, RefreshCw, AlertTriangle, Search } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
-import { getDashboardStats } from '../services/api';
+import { getDashboardStats, getUsersActivityReport } from '../services/api';
 import { exportToCSV } from '../utils/exportUtils';
 
 const CATEGORY_COLORS = {
@@ -17,14 +17,20 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const ReportsAnalytics = () => {
   const { t } = useI18n();
   const [data, setData] = useState(null);
+  const [usersReport, setUsersReport] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const fetchStats = async () => {
     setLoading(true); setError('');
     try {
-      const res = await getDashboardStats();
-      setData(res.data);
+      const [statsRes, usersRes] = await Promise.all([
+        getDashboardStats(),
+        getUsersActivityReport()
+      ]);
+      setData(statsRes.data);
+      setUsersReport(usersRes.data.users || []);
     } catch (e) {
       setError('Failed to load reports data');
     } finally {
@@ -169,6 +175,76 @@ const ReportsAnalytics = () => {
             </AreaChart>
           </ResponsiveContainer>
         )}
+      </div>
+
+      {/* User Day-to-Day Activity Report Table */}
+      <div className="card space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-lg text-slate-900 dark:text-white">Warbixinta Maalinlaha ah ee Isticmaalayaasha (User Activity Report)</h2>
+            <p className="text-xs text-slate-500">Day-to-day registration duration, active days and billing stats per user.</p>
+          </div>
+          <div className="w-full sm:w-64 relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search user..."
+              className="input pl-9 py-1.5 text-xs"
+              value={userSearch}
+              onChange={e => setUserSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="table-wrapper border-0 -mx-6">
+          <table>
+            <thead>
+              <tr>
+                <th>User Details</th>
+                <th>Status</th>
+                <th>Registration Date</th>
+                <th>Days Registered</th>
+                <th>Total Bills</th>
+                <th>Paid Bills</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                [...Array(3)].map((_, i) => (
+                  <tr key={i}>
+                    {[...Array(6)].map((_, j) => <td key={j}><div className="h-4 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" /></td>)}
+                  </tr>
+                ))
+              ) : usersReport.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-6 text-slate-400">No users found.</td>
+                </tr>
+              ) : usersReport
+                  .filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase()))
+                  .map((u) => (
+                    <tr key={u._id}>
+                      <td>
+                        <div className="font-medium text-slate-900 dark:text-white">{u.name}</div>
+                        <div className="text-xs text-slate-400">{u.email} • {u.phone}</div>
+                      </td>
+                      <td>
+                        <span className={`badge text-xs capitalize ${u.status === 'active' ? 'badge-success' : u.status === 'suspended' ? 'badge-danger' : 'badge-warning'}`}>
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="text-xs text-slate-500">{new Date(u.createdAt).toLocaleDateString()}</td>
+                      <td className="font-semibold text-slate-800 dark:text-slate-200">
+                        {u.daysActive} {u.daysActive === 1 ? 'maalin' : 'maalmood'}
+                      </td>
+                      <td className="text-slate-600 dark:text-slate-400">{u.totalBills} bills</td>
+                      <td>
+                        <span className="badge badge-success text-xs">{u.paidBills} paid</span>
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

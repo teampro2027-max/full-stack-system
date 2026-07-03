@@ -8,7 +8,19 @@ const getBills = async (req, res) => {
         if (req.user.role !== 'admin') {
             query.userId = req.user._id;
         }
-        const bills = await Bill.find(query).populate('userId', 'name email');
+        const { status, category, search } = req.query;
+        if (status && status !== 'all') query.status = status;
+        if (category && category !== 'all') query.category = category;
+
+        let bills = await Bill.find(query).populate('userId', 'name email').sort({ createdAt: -1 });
+
+        if (search) {
+            bills = bills.filter(b =>
+                b.title?.toLowerCase().includes(search.toLowerCase()) ||
+                b.category?.includes(search.toLowerCase())
+            );
+        }
+
         res.json(bills);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -16,9 +28,30 @@ const getBills = async (req, res) => {
 };
 
 const createBill = async (req, res) => {
-    const { title, amount, dueDate, category, isRecurring, recurringInterval, notes } = req.body;
+    const { title, amount, dueDate, category, isRecurring, recurringInterval, notes, startDate, notificationDate } = req.body;
     
     const targetUserId = (req.user.role === 'admin' && req.body.userId) ? req.body.userId : req.user._id;
+
+    const now = new Date();
+    const buffer = 5 * 60 * 1000; // 5 mins buffer
+
+    if (startDate && new Date(startDate).getTime() < now.getTime() - buffer) {
+        return res.status(400).json({ message: 'Start date and time cannot be in the past' });
+    }
+    if (dueDate && new Date(dueDate).getTime() < now.getTime() - buffer) {
+        return res.status(400).json({ message: 'Due date and time cannot be in the past' });
+    }
+    if (notificationDate && new Date(notificationDate).getTime() < now.getTime() - buffer) {
+        return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
+    }
+    
+    const startVal = startDate ? new Date(startDate) : now;
+    if (dueDate && new Date(dueDate).getTime() < startVal.getTime()) {
+        return res.status(400).json({ message: 'Due date must be after the start date' });
+    }
+    if (notificationDate && new Date(notificationDate).getTime() < startVal.getTime()) {
+        return res.status(400).json({ message: 'Notification date must be after the start date' });
+    }
 
     try {
         const bill = await Bill.create({
@@ -29,7 +62,9 @@ const createBill = async (req, res) => {
             category,
             isRecurring: isRecurring || false,
             recurringInterval: recurringInterval || 'monthly',
-            notes: notes || ''
+            notes: notes || '',
+            startDate: startDate || now,
+            notificationDate: notificationDate || undefined
         });
 
         // Create in-app notification for the user
@@ -62,6 +97,31 @@ const updateBill = async (req, res) => {
         // Check ownership unless admin
         if (bill.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
             return res.status(401).json({ message: 'Not authorized to update this bill' });
+        }
+
+        // Validate dates if updated
+        const now = new Date();
+        const buffer = 5 * 60 * 1000;
+        
+        if (req.body.startDate && new Date(req.body.startDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Start date and time cannot be in the past' });
+        }
+        if (req.body.dueDate && new Date(req.body.dueDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Due date and time cannot be in the past' });
+        }
+        if (req.body.notificationDate && new Date(req.body.notificationDate).getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
+        }
+
+        const startVal = req.body.startDate ? new Date(req.body.startDate) : new Date(bill.startDate);
+        const dueVal = req.body.dueDate ? new Date(req.body.dueDate) : new Date(bill.dueDate);
+        const notifVal = req.body.notificationDate ? new Date(req.body.notificationDate) : (bill.notificationDate ? new Date(bill.notificationDate) : null);
+
+        if (dueVal && startVal && dueVal.getTime() < startVal.getTime()) {
+            return res.status(400).json({ message: 'Due date must be after the start date' });
+        }
+        if (notifVal && startVal && notifVal.getTime() < startVal.getTime()) {
+            return res.status(400).json({ message: 'Notification date must be after the start date' });
         }
 
         const updatedBill = await Bill.findByIdAndUpdate(

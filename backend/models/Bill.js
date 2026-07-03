@@ -54,6 +54,13 @@ const billSchema = new mongoose.Schema({
         type: String,
         enum: ['en', 'so'],
         default: 'en'
+    },
+    startDate: {
+        type: Date,
+        default: Date.now
+    },
+    notificationDate: {
+        type: Date
     }
 }, { timestamps: true });
 

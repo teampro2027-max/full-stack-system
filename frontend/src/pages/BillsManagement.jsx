@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Filter, RefreshCw, AlertTriangle, Edit, Trash2, MoreVertical, Download } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
-import { getAdminBills, updateAdminBill, deleteAdminBill, createAdminBill, getCategories } from '../services/api';
+import { getAdminBills, updateAdminBill, deleteAdminBill, createAdminBill, getUserBills, createUserBill, updateUserBill, deleteUserBill, getCategories } from '../services/api';
+import { useStore } from '../store/useStore';
 import CustomDialog from '../components/CustomDialog';
 
 const STATUS_COLORS = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
 const BillsManagement = () => {
   const { t } = useI18n();
+  const adminUser = useStore((s) => s.adminUser);
+  const isAdmin = adminUser?.role === 'admin';
+
   const [bills, setBills] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -19,30 +23,90 @@ const BillsManagement = () => {
   const [editBill, setEditBill] = useState(null);
   const [saving, setSaving] = useState(false);
   const [dbCategories, setDbCategories] = useState([]);
-  const [form, setForm] = useState({ userId: '', title: '', amount: '', category: '', status: 'unpaid', dueDate: '', isRecurring: false });
+  const [selectedParentKey, setSelectedParentKey] = useState('');
+  const [form, setForm] = useState({
+    userId: '',
+    title: '',
+    amount: '',
+    category: '',
+    status: 'unpaid',
+    dueDate: '',
+    startDate: '',
+    notificationDate: '',
+    isRecurring: false
+  });
   const [dialogConfig, setDialogConfig] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const getParentKeyFromCategoryKey = (catKey) => {
+    if (!catKey) return '';
+    const idx = catKey.indexOf('_');
+    if (idx === -1) return catKey;
+    return catKey.substring(0, idx);
+  };
+
+  const toDateTimeLocal = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
+  const openAdd = () => {
+    setEditBill(null);
+    setSelectedParentKey('');
+    setForm({
+      userId: '',
+      title: '',
+      amount: '',
+      category: '',
+      status: 'unpaid',
+      dueDate: '',
+      startDate: new Date().toISOString().slice(0, 16),
+      notificationDate: '',
+      isRecurring: false
+    });
+    setShowModal(true);
+  };
 
   const fetchBills = useCallback(async () => {
     setLoading(true); setError('');
     try {
+      const params = { status: filterStatus !== 'all' ? filterStatus : undefined, search };
       const [billsRes, catRes] = await Promise.all([
-        getAdminBills({ status: filterStatus !== 'all' ? filterStatus : undefined, search }),
+        isAdmin ? getAdminBills(params) : getUserBills(params),
         getCategories()
       ]);
-      setBills(billsRes.data.bills || []);
-      setTotal(billsRes.data.total || 0);
+      const resData = billsRes.data;
+      const parsedBills = Array.isArray(resData) ? resData : (resData.bills || []);
+      const parsedTotal = Array.isArray(resData) ? resData.length : (resData.total || parsedBills.length);
+
+      setBills(parsedBills);
+      setTotal(parsedTotal);
       const activeCats = (catRes.data.categories || []).filter(c => c.active);
       setDbCategories(activeCats);
     } catch (e) { setError(e.response?.data?.message || 'Failed to load data'); }
     finally { setLoading(false); }
-  }, [filterStatus, search]);
+  }, [filterStatus, search, isAdmin]);
 
   useEffect(() => { fetchBills(); }, [fetchBills]);
 
   const openEdit = (bill) => {
     setEditBill(bill);
-    setForm({ userId: bill.userId?._id || '', title: bill.title || '', amount: bill.amount || '', category: bill.category, status: bill.status, dueDate: bill.dueDate?.split('T')[0] || '', isRecurring: bill.isRecurring || false });
+    const parentKey = getParentKeyFromCategoryKey(bill.category);
+    setSelectedParentKey(parentKey);
+    setForm({
+      userId: bill.userId?._id || '',
+      title: bill.title || '',
+      amount: bill.amount || '',
+      category: bill.category || '',
+      status: bill.status,
+      dueDate: toDateTimeLocal(bill.dueDate),
+      startDate: toDateTimeLocal(bill.startDate),
+      notificationDate: toDateTimeLocal(bill.notificationDate),
+      isRecurring: bill.isRecurring || false
+    });
     setShowModal(true); setOpenMenu(null);
   };
 
@@ -55,13 +119,51 @@ const BillsManagement = () => {
       setDialogConfig({ type: 'error', message: 'Amount must be a valid number greater than 0' });
       return;
     }
+    if (!form.category) {
+      setDialogConfig({ type: 'error', message: 'Fadlan dooro category ama subcategory' });
+      return;
+    }
+
+    const nowObj = new Date();
+    const buffer = 5 * 60 * 1000;
+
+    if (form.startDate && new Date(form.startDate).getTime() < nowObj.getTime() - buffer) {
+      setDialogConfig({ type: 'error', message: 'Registration/Start date and time cannot be in the past' });
+      return;
+    }
+    if (form.dueDate && new Date(form.dueDate).getTime() < nowObj.getTime() - buffer) {
+      setDialogConfig({ type: 'error', message: 'Due date and time cannot be in the past' });
+      return;
+    }
+    if (form.notificationDate && new Date(form.notificationDate).getTime() < nowObj.getTime() - buffer) {
+      setDialogConfig({ type: 'error', message: 'Notification date and time cannot be in the past' });
+      return;
+    }
+    const startT = form.startDate ? new Date(form.startDate).getTime() : nowObj.getTime();
+    if (form.dueDate && new Date(form.dueDate).getTime() < startT) {
+      setDialogConfig({ type: 'error', message: 'Due date must be after the start date' });
+      return;
+    }
+    if (form.notificationDate && new Date(form.notificationDate).getTime() < startT) {
+      setDialogConfig({ type: 'error', message: 'Notification date must be after the start date' });
+      return;
+    }
+
     setSaving(true);
     try {
       if (editBill) {
-        await updateAdminBill(editBill._id, form);
+        if (isAdmin) {
+          await updateAdminBill(editBill._id, form);
+        } else {
+          await updateUserBill(editBill._id, form);
+        }
         setDialogConfig({ type: 'success', message: 'Bill updated successfully' });
       } else {
-        await createAdminBill(form);
+        if (isAdmin) {
+          await createAdminBill(form);
+        } else {
+          await createUserBill(form);
+        }
         setDialogConfig({ type: 'success', message: 'Bill created successfully' });
       }
       setShowModal(false); fetchBills();
@@ -76,7 +178,11 @@ const BillsManagement = () => {
 
   const executeDelete = async (id) => {
     try { 
-      await deleteAdminBill(id); 
+      if (isAdmin) {
+        await deleteAdminBill(id);
+      } else {
+        await deleteUserBill(id);
+      }
       fetchBills(); 
       setDialogConfig({ type: 'success', message: 'Bill deleted successfully' });
     } catch { setDialogConfig({ type: 'error', message: 'Error deleting bill' }); }
@@ -84,7 +190,11 @@ const BillsManagement = () => {
 
   const handleMarkPaid = async (bill) => {
     try { 
-      await updateAdminBill(bill._id, { status: 'paid' }); 
+      if (isAdmin) {
+        await updateAdminBill(bill._id, { status: 'paid' });
+      } else {
+        await updateUserBill(bill._id, { status: 'paid' });
+      }
       fetchBills(); 
       setDialogConfig({ type: 'success', message: 'Bill marked as paid' });
     } catch { setDialogConfig({ type: 'error', message: 'Error marking bill as paid' }); }
@@ -100,7 +210,7 @@ const BillsManagement = () => {
         </div>
         <div className="flex gap-2">
           <button onClick={fetchBills} className="btn-secondary"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /></button>
-          <button className="btn-primary" onClick={() => { setEditBill(null); setShowModal(true); }}><Plus size={15} />Add Bill</button>
+          <button className="btn-primary" onClick={openAdd}><Plus size={15} />Add Bill</button>
         </div>
       </div>
 
@@ -132,22 +242,32 @@ const BillsManagement = () => {
           <table>
             <thead>
               <tr>
-                <th>User</th><th>Category</th><th>{t('amount')}</th><th>Due Date</th><th>{t('status')}</th><th>Recurring</th><th>{t('actions')}</th>
+                {isAdmin && <th>User</th>}
+                <th>Title</th>
+                <th>Category</th>
+                <th>{t('amount')}</th>
+                <th>Due Date</th>
+                <th>{t('status')}</th>
+                <th>Recurring</th>
+                <th>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i}>{[...Array(7)].map((_, j) => <td key={j}><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"/></td>)}</tr>
+                  <tr key={i}>{[...Array(isAdmin ? 8 : 7)].map((_, j) => <td key={j}><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"/></td>)}</tr>
                 ))
               ) : bills.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-10 text-slate-400">{t('noData')}</td></tr>
+                <tr><td colSpan={isAdmin ? 8 : 7} className="text-center py-10 text-slate-400">{t('noData')}</td></tr>
               ) : bills.map(b => (
                 <tr key={b._id}>
-                  <td>
-                    <div className="font-medium text-slate-900 dark:text-white">{b.userId?.name || '—'}</div>
-                    <div className="text-xs text-slate-400">{b.userId?.phone || b.userId?.email || ''}</div>
-                  </td>
+                  {isAdmin && (
+                    <td>
+                      <div className="font-medium text-slate-900 dark:text-white">{b.userId?.name || '—'}</div>
+                      <div className="text-xs text-slate-400">{b.userId?.phone || b.userId?.email || ''}</div>
+                    </td>
+                  )}
+                  <td><span className="font-medium text-slate-800 dark:text-slate-100">{b.title}</span></td>
                   <td><span className="badge badge-info capitalize">{b.category?.replace(/_/g,' ')}</span></td>
                   <td className="font-bold text-slate-900 dark:text-white">${b.amount}</td>
                   <td className="text-slate-500 text-sm">{b.dueDate ? new Date(b.dueDate).toLocaleDateString() : '—'}</td>
@@ -177,18 +297,99 @@ const BillsManagement = () => {
           <div className="card w-full max-w-md mx-4 animate-fade-in" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold mb-4">{editBill ? 'Edit Bill' : 'Add Bill'}</h2>
             <div className="space-y-3">
-              <div><label className="label">User ID</label><input className="input" placeholder="MongoDB user _id" value={form.userId} onChange={e => setForm({...form, userId: e.target.value})}/></div>
+              {isAdmin && (
+                <div>
+                  <label className="label">User ID</label>
+                  <input
+                    className="input"
+                    placeholder="MongoDB user _id"
+                    value={form.userId}
+                    onChange={(e) => setForm({ ...form, userId: e.target.value })}
+                  />
+                </div>
+              )}
               <div><label className="label">Title</label><input className="input" placeholder="e.g. Electricity October" value={form.title} onChange={e => setForm({...form, title: e.target.value})}/></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Amount ($)</label><input type="number" className="input" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})}/></div>
-                <div><label className="label">Due Date</label><input type="date" className="input" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})}/></div>
+                <div><label className="label">Due Date & Time</label><input type="datetime-local" className="input" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})}/></div>
               </div>
-              <div><label className="label">Category</label>
-                <select className="input" value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
-                  <option value="">Select Category</option>
-                  {dbCategories.map(c => <option key={c.key} value={c.key}>{c.name}</option>)}
-                </select>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Start Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    className="input"
+                    value={form.startDate}
+                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Notification Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    className="input"
+                    value={form.notificationDate}
+                    onChange={(e) => setForm({ ...form, notificationDate: e.target.value })}
+                  />
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Category</label>
+                  <select
+                    className="input"
+                    value={selectedParentKey}
+                    onChange={(e) => {
+                      const pKey = e.target.value;
+                      setSelectedParentKey(pKey);
+                      const parent = dbCategories.find((c) => c.key === pKey);
+                      const hasSubs = dbCategories.some((c) => c.parentId === parent?._id);
+                      setForm({ ...form, category: hasSubs ? '' : pKey });
+                    }}
+                  >
+                    <option value="">Select Category</option>
+                    {dbCategories
+                      .filter((c) => !c.parentId)
+                      .map((c) => (
+                        <option key={c.key} value={c.key}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {selectedParentKey &&
+                  dbCategories.some(
+                    (c) =>
+                      c.parentId ===
+                      dbCategories.find((p) => p.key === selectedParentKey)?._id
+                  ) && (
+                    <div>
+                      <label className="label">Subcategory</label>
+                      <select
+                        className="input"
+                        value={form.category}
+                        onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      >
+                        <option value="">Select Subcategory</option>
+                        {dbCategories
+                          .filter(
+                            (c) =>
+                              c.parentId ===
+                              dbCategories.find((p) => p.key === selectedParentKey)?._id
+                          )
+                          .map((c) => (
+                            <option key={c.key} value={c.key}>
+                              {c.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+              </div>
+
               <div><label className="label">Status</label>
                 <select className="input" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
                   <option value="unpaid">Unpaid</option><option value="paid">Paid</option><option value="overdue">Overdue</option>
