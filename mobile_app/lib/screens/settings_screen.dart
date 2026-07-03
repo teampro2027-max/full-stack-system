@@ -108,16 +108,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: Colors.white,
-                        backgroundImage: user?['profilePicture'] != null
-                            ? NetworkImage(user!['profilePicture'])
-                            : null,
-                        child: user?['profilePicture'] == null
-                            ? const Icon(
+                        child: user?['profilePicture'] != null
+                            ? ClipOval(
+                                child: Image.network(
+                                  user!['profilePicture'],
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Color(0xFF4F46E5),
+                                  ),
+                                ),
+                              )
+                            : const Icon(
                                 Icons.person,
                                 size: 50,
                                 color: Color(0xFF4F46E5),
-                              )
-                            : null,
+                              ),
                       ),
                       Positioned(
                         bottom: 0,

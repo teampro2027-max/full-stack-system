@@ -87,6 +87,26 @@ const broadcastNotification = async (req, res) => {
     }
 };
 
+// PUT /api/notifications/:id - mark as read
+const markNotificationAsRead = async (req, res) => {
+    try {
+        const notification = await Notification.findById(req.params.id);
+        if (!notification) {
+            return res.status(404).json({ message: 'Notification not found' });
+        }
+        // Ensure the notification belongs to the requesting user
+        if (notification.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+        notification.status = 'read';
+        await notification.save();
+        res.json(notification);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error updating notification', error: error.message });
+    }
+};
+
 // GET /api/notifications
 const getNotifications = async (req, res) => {
     try {
@@ -99,4 +119,4 @@ const getNotifications = async (req, res) => {
     }
 };
 
-module.exports = { updateFcmToken, sendNotification, broadcastNotification, sendPushNotification, getNotifications };
+module.exports = { updateFcmToken, sendNotification, broadcastNotification, sendPushNotification, getNotifications, markNotificationAsRead };
