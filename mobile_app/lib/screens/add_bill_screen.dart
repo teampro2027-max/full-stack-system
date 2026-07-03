@@ -22,8 +22,8 @@ class _AddBillScreenState extends State<AddBillScreen> {
   String _selectedParentId = '';
   DateTime _startDate = DateTime.now();
   DateTime _dueDate = DateTime.now().add(const Duration(days: 7));
-  DateTime? _notificationDate;
-  bool _setReminder = false;
+  DateTime? _notificationDate = DateTime.now().add(const Duration(days: 1));
+  bool _setReminder = true;
 
   bool _isRecurring = false;
   String _recurringInterval = 'monthly';
@@ -134,45 +134,45 @@ class _AddBillScreenState extends State<AddBillScreen> {
     final now = DateTime.now();
     final buffer = const Duration(minutes: 5);
 
-    if (_startDate.isBefore(now.subtract(buffer))) {
+    if (_notificationDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Start date and time cannot be in the past')),
+        const SnackBar(content: Text('Please select a reminder date and time')),
       );
       return;
     }
-    if (_dueDate.isBefore(now.subtract(buffer))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Due date and time cannot be in the past')),
-      );
-      return;
-    }
-    if (_setReminder && _notificationDate != null && _notificationDate!.isBefore(now.subtract(buffer))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notification date and time cannot be in the past')),
-      );
-      return;
-    }
-    if (_dueDate.isBefore(_startDate)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Due date must be after the start date')),
-      );
-      return;
-    }
-    if (_setReminder && _notificationDate != null && _notificationDate!.isBefore(_startDate)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notification date must be after the start date')),
-      );
-      return;
+
+    if (widget.existingBill == null) {
+      if (_notificationDate!.isBefore(now.subtract(buffer))) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Reminder date and time cannot be in the past')),
+        );
+        return;
+      }
+    } else {
+      final originalNotifStr = widget.existingBill!['notificationDate'];
+      final originalNotif = originalNotifStr != null ? DateTime.tryParse(originalNotifStr) : null;
+      if (originalNotif == null || _notificationDate!.isAtSameMomentAs(originalNotif) == false) {
+        if (_notificationDate!.isBefore(now.subtract(buffer))) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Reminder date and time cannot be in the past')),
+          );
+          return;
+        }
+      }
     }
 
     setState(() => _loading = true);
 
+    final resolvedStartDate = widget.existingBill != null
+        ? (DateTime.tryParse(widget.existingBill!['startDate'] ?? '') ?? now)
+        : now;
+
     final data = {
       'title': _titleController.text.trim(),
       'amount': double.parse(_amountController.text),
-      'dueDate': _dueDate.toIso8601String(),
-      'startDate': _startDate.toIso8601String(),
-      'notificationDate': _setReminder && _notificationDate != null ? _notificationDate!.toIso8601String() : null,
+      'dueDate': _notificationDate!.toIso8601String(),
+      'startDate': resolvedStartDate.toIso8601String(),
+      'notificationDate': _notificationDate!.toIso8601String(),
       'category': _category,
       'isRecurring': _isRecurring,
       'recurringInterval': _recurringInterval,
@@ -471,142 +471,43 @@ class _AddBillScreenState extends State<AddBillScreen> {
               ]),
               const SizedBox(height: 16),
 
-              // Dates: Start Date & Due Date
-              Row(
+              // Dates: Start Date & Due Date Row has been hidden.
+              // We only display the Reminder Date & Time selector directly.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _label('Start Date & Time'),
-                        GestureDetector(
-                          onTap: () async {
-                            final dt = await _pickDateTime(_startDate);
-                            if (dt != null) setState(() => _startDate = dt);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.access_time, size: 14, color: Colors.indigo),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    '${_startDate.day}/${_startDate.month}/${_startDate.year} ${_startDate.hour.toString().padLeft(2, '0')}:${_startDate.minute.toString().padLeft(2, '0')}',
-                                    style: const TextStyle(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                  _label('Reminder Date & Time'),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () async {
+                      final dt = await _pickDateTime(_notificationDate ?? DateTime.now().add(const Duration(days: 1)));
+                      if (dt != null) setState(() => _notificationDate = dt);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.notifications_active, size: 14, color: Colors.indigo),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _notificationDate == null
+                                  ? 'Select Reminder Date & Time'
+                                  : '${_notificationDate!.day}/${_notificationDate!.month}/${_notificationDate!.year} ${_notificationDate!.hour.toString().padLeft(2, '0')}:${_notificationDate!.minute.toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _label('Due Date & Time'),
-                        GestureDetector(
-                          onTap: () async {
-                            final dt = await _pickDateTime(_dueDate);
-                            if (dt != null) setState(() => _dueDate = dt);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today, size: 14, color: Colors.indigo),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    '${_dueDate.day}/${_dueDate.month}/${_dueDate.year} ${_dueDate.hour.toString().padLeft(2, '0')}:${_dueDate.minute.toString().padLeft(2, '0')}',
-                                    style: const TextStyle(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-
-              // Notification Reminder
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.grey.shade100),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Set Notification Reminder', style: TextStyle(fontWeight: FontWeight.w600)),
-                        Switch(
-                          value: _setReminder,
-                          onChanged: (v) {
-                            setState(() {
-                              _setReminder = v;
-                              if (v && _notificationDate == null) {
-                                _notificationDate = DateTime.now().add(const Duration(days: 6));
-                              }
-                            });
-                          },
-                          activeColor: const Color(0xFF4F46E5),
-                        ),
-                      ],
-                    ),
-                    if (_setReminder && _notificationDate != null) ...[
-                      const Divider(height: 16),
-                      GestureDetector(
-                        onTap: () async {
-                          final dt = await _pickDateTime(_notificationDate!);
-                          if (dt != null) setState(() => _notificationDate = dt);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.notifications_active, size: 14, color: Colors.indigo),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${_notificationDate!.day}/${_notificationDate!.month}/${_notificationDate!.year} ${_notificationDate!.hour.toString().padLeft(2, '0')}:${_notificationDate!.minute.toString().padLeft(2, '0')}',
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ]
-                  ],
-                ),
               ),
               const SizedBox(height: 16),
 

@@ -6,6 +6,7 @@ const { sendBillReminderEmail } = require('./emailService');
 
 // Run everyday at 8:00 AM
 const setupCronJobs = () => {
+    // 1. Run everyday at 8:00 AM for Upcoming & Overdue checks
     cron.schedule('0 8 * * *', async () => {
         console.log('Running daily bill reminder check');
         
@@ -14,7 +15,7 @@ const setupCronJobs = () => {
             const threeDaysFromNow = new Date();
             threeDaysFromNow.setDate(today.getDate() + 3);
 
-            // 1. Check for upcoming bills (1-3 days)
+            // Check for upcoming bills (1-3 days)
             const upcomingBills = await Bill.find({
                 status: 'unpaid',
                 dueDate: { $gte: today, $lte: threeDaysFromNow }
@@ -30,7 +31,7 @@ const setupCronJobs = () => {
                 await sendPushNotification(bill.userId, 'Xasuusin Biil', msg);
             }
 
-            // 2. Check for overdue bills
+            // Check for overdue bills
             const overdueBills = await Bill.find({
                 status: 'unpaid',
                 dueDate: { $lt: today }
@@ -49,53 +50,78 @@ const setupCronJobs = () => {
                 await sendPushNotification(bill.userId, 'Biil Wakhtigii dhaafay', msg);
             }
 
-            // 3. Check for paid bills that have reached their 30-day cycle
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-            thirtyDaysAgo.setHours(23, 59, 59, 999); // Safe boundary for end of day
+            console.log('Finished daily cron jobs successfully.');
+        } catch (error) {
+            console.error('Error running daily cron jobs:', error.message);
+        }
+    });
 
-            const recurringBillsToReset = await Bill.find({
-                status: 'paid',
-                lastPaidDate: { $lte: thirtyDaysAgo }
+    // 2. Run every minute to check for specific Reminder Date/Time resets and notifications
+    cron.schedule('* * * * *', async () => {
+        console.log('Running minute-by-minute reminder and paid-to-unpaid reset check');
+        try {
+            const now = new Date();
+            const billsToProcess = await Bill.find({
+                notificationDate: { $exists: true, $ne: null, $lte: now }
             }).populate('userId', 'name email');
 
-            for (let bill of recurringBillsToReset) {
+            for (let bill of billsToProcess) {
                 if (!bill.userId) {
-                    console.log(`Skipping recurring reset for bill ${bill._id} because userId is missing.`);
+                    console.log(`Skipping reminder for bill ${bill._id} because userId is missing.`);
                     continue;
                 }
 
-                // Reset back to unpaid
-                bill.status = 'unpaid';
-                // Set the new due date to today (or + X days if you want a grace period, e.g. + 5)
-                bill.dueDate = new Date(); 
-                // Unset lastPaidDate so it doesn't keep triggering until paid again
-                bill.lastPaidDate = null;
-                await bill.save();
+                const wasPaid = bill.status === 'paid';
+                
+                // If the bill was paid, reset to unpaid and clear lastPaidDate
+                if (wasPaid) {
+                    bill.status = 'unpaid';
+                    bill.lastPaidDate = null;
+                }
 
                 const userName = bill.userId.name || 'Macaamiil';
                 const userEmail = bill.userId.email;
-                const msg = `Waqtigii lacag bixinta biilkaaga "${bill.title}" waa la gaaray (30 maalmood ayaa dhammaatay). Fadlan bixi $${bill.amount}.`;
                 
+                const msg = wasPaid
+                    ? `Waqtigii lacag bixinta biilkaaga "${bill.title}" waa la gaaray. Fadlan bixi $${bill.amount}.`
+                    : `Xasuusin: Biilkaaga "${bill.title}" waxaa la gaaray waqtigii loogu talagalay in la bixiyo ($${bill.amount}).`;
+
                 // In-App Notification
                 await Notification.create({
                     userId: bill.userId._id,
-                    title: 'Waqtigii Biilka Oo La Gaaray',
+                    title: 'Xasuusin Biil',
                     message: msg
                 });
 
                 // Push Notification
-                await sendPushNotification(bill.userId._id, 'Waqtigii Biilka Oo La Gaaray', msg);
+                await sendPushNotification(bill.userId._id, 'Xasuusin Biil', msg);
 
                 // Email Reminder
                 if (userEmail) {
                     await sendBillReminderEmail(userEmail, userName, bill.title, bill.amount);
                 }
-            }
 
-            console.log('Finished daily cron jobs successfully.');
+                // Update dates for next cycle (if recurring) or clear reminder (if one-time)
+                if (bill.isRecurring) {
+                    const nextDate = new Date(bill.notificationDate);
+                    if (bill.recurringInterval === 'yearly') {
+                        nextDate.setFullYear(nextDate.getFullYear() + 1);
+                    } else {
+                        // default to monthly
+                        nextDate.setMonth(nextDate.getMonth() + 1);
+                    }
+                    bill.notificationDate = nextDate;
+                    bill.dueDate = nextDate;
+                } else {
+                    // Set notificationDate to null so it doesn't trigger again
+                    bill.notificationDate = null;
+                }
+
+                await bill.save();
+                console.log(`Processed reminder/reset for bill ${bill._id}`);
+            }
         } catch (error) {
-            console.error('Error running cron jobs:', error.message);
+            console.error('Error running minute-by-minute reminder cron job:', error.message);
         }
     });
 };

@@ -28,28 +28,26 @@ const getBills = async (req, res) => {
 };
 
 const createBill = async (req, res) => {
-    const { title, amount, dueDate, category, isRecurring, recurringInterval, notes, startDate, notificationDate } = req.body;
+    let { title, amount, dueDate, category, isRecurring, recurringInterval, notes, startDate, notificationDate } = req.body;
     
     const targetUserId = (req.user.role === 'admin' && req.body.userId) ? req.body.userId : req.user._id;
 
     const now = new Date();
     const buffer = 5 * 60 * 1000; // 5 mins buffer
 
-    if (startDate && new Date(startDate).getTime() < now.getTime() - buffer) {
-        return res.status(400).json({ message: 'Start date and time cannot be in the past' });
+    if (notificationDate) {
+        dueDate = notificationDate;
     }
-    if (dueDate && new Date(dueDate).getTime() < now.getTime() - buffer) {
-        return res.status(400).json({ message: 'Due date and time cannot be in the past' });
-    }
+    const resolvedStartDate = startDate ? new Date(startDate) : now;
+
     if (notificationDate && new Date(notificationDate).getTime() < now.getTime() - buffer) {
         return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
     }
     
-    const startVal = startDate ? new Date(startDate) : now;
-    if (dueDate && new Date(dueDate).getTime() < startVal.getTime()) {
+    if (dueDate && new Date(dueDate).getTime() < resolvedStartDate.getTime()) {
         return res.status(400).json({ message: 'Due date must be after the start date' });
     }
-    if (notificationDate && new Date(notificationDate).getTime() < startVal.getTime()) {
+    if (notificationDate && new Date(notificationDate).getTime() < resolvedStartDate.getTime()) {
         return res.status(400).json({ message: 'Notification date must be after the start date' });
     }
 
@@ -58,12 +56,12 @@ const createBill = async (req, res) => {
             userId: targetUserId,
             title,
             amount,
-            dueDate,
+            dueDate: dueDate || resolvedStartDate,
             category,
             isRecurring: isRecurring || false,
             recurringInterval: recurringInterval || 'monthly',
             notes: notes || '',
-            startDate: startDate || now,
+            startDate: resolvedStartDate,
             notificationDate: notificationDate || undefined
         });
 
@@ -99,16 +97,14 @@ const updateBill = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized to update this bill' });
         }
 
-        // Validate dates if updated
+        if (req.body.notificationDate) {
+            req.body.dueDate = req.body.notificationDate;
+        }
+
+        // Validate notification date if updated
         const now = new Date();
         const buffer = 5 * 60 * 1000;
         
-        if (req.body.startDate && new Date(req.body.startDate).getTime() < now.getTime() - buffer) {
-            return res.status(400).json({ message: 'Start date and time cannot be in the past' });
-        }
-        if (req.body.dueDate && new Date(req.body.dueDate).getTime() < now.getTime() - buffer) {
-            return res.status(400).json({ message: 'Due date and time cannot be in the past' });
-        }
         if (req.body.notificationDate && new Date(req.body.notificationDate).getTime() < now.getTime() - buffer) {
             return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
         }

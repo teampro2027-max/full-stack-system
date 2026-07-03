@@ -127,17 +127,25 @@ const BillsManagement = () => {
     const nowObj = new Date();
     const buffer = 5 * 60 * 1000;
 
-    if (form.startDate && new Date(form.startDate).getTime() < nowObj.getTime() - buffer) {
-      setDialogConfig({ type: 'error', message: 'Registration/Start date and time cannot be in the past' });
-      return;
-    }
-    if (form.dueDate && new Date(form.dueDate).getTime() < nowObj.getTime() - buffer) {
-      setDialogConfig({ type: 'error', message: 'Due date and time cannot be in the past' });
-      return;
-    }
-    if (form.notificationDate && new Date(form.notificationDate).getTime() < nowObj.getTime() - buffer) {
-      setDialogConfig({ type: 'error', message: 'Notification date and time cannot be in the past' });
-      return;
+    if (!editBill) {
+      if (form.startDate && new Date(form.startDate).getTime() < nowObj.getTime() - buffer) {
+        setDialogConfig({ type: 'error', message: 'Registration/Start date and time cannot be in the past' });
+        return;
+      }
+      if (form.dueDate && new Date(form.dueDate).getTime() < nowObj.getTime() - buffer) {
+        setDialogConfig({ type: 'error', message: 'Due date and time cannot be in the past' });
+        return;
+      }
+      if (form.notificationDate && new Date(form.notificationDate).getTime() < nowObj.getTime() - buffer) {
+        setDialogConfig({ type: 'error', message: 'Notification date and time cannot be in the past' });
+        return;
+      }
+    } else {
+      const originalNotif = editBill.notificationDate ? toDateTimeLocal(editBill.notificationDate) : '';
+      if (form.notificationDate && form.notificationDate !== originalNotif && new Date(form.notificationDate).getTime() < nowObj.getTime() - buffer) {
+        setDialogConfig({ type: 'error', message: 'Notification date and time cannot be in the past' });
+        return;
+      }
     }
     const startT = form.startDate ? new Date(form.startDate).getTime() : nowObj.getTime();
     if (form.dueDate && new Date(form.dueDate).getTime() < startT) {
@@ -311,26 +319,21 @@ const BillsManagement = () => {
               <div><label className="label">Title</label><input className="input" placeholder="e.g. Electricity October" value={form.title} onChange={e => setForm({...form, title: e.target.value})}/></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Amount ($)</label><input type="number" className="input" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})}/></div>
-                <div><label className="label">Due Date & Time</label><input type="datetime-local" className="input" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})}/></div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">Start Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    className="input"
-                    value={form.startDate}
-                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="label">Notification Date & Time</label>
+                  <label className="label">Reminder Date & Time</label>
                   <input
                     type="datetime-local"
                     className="input"
                     value={form.notificationDate}
-                    onChange={(e) => setForm({ ...form, notificationDate: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setForm({
+                        ...form,
+                        notificationDate: val,
+                        dueDate: val,
+                        startDate: form.startDate || new Date().toISOString().slice(0, 16)
+                      });
+                    }}
                   />
                 </div>
               </div>

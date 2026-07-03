@@ -228,7 +228,7 @@ const adminGetBills = async (req, res) => {
 
 const adminCreateBill = async (req, res) => {
     try {
-        const { title, amount, startDate, dueDate, notificationDate } = req.body;
+        let { title, amount, startDate, dueDate, notificationDate } = req.body;
         if (!title || !/^[a-zA-Z\s]+$/.test(title.trim())) {
             return res.status(400).json({ message: 'Title must contain only letters and spaces' });
         }
@@ -239,12 +239,15 @@ const adminCreateBill = async (req, res) => {
         const now = new Date();
         const buffer = 5 * 60 * 1000;
 
-        if (startDate && new Date(startDate).getTime() < now.getTime() - buffer) {
-            return res.status(400).json({ message: 'Start date and time cannot be in the past' });
+        if (notificationDate) {
+            req.body.dueDate = notificationDate;
+            dueDate = notificationDate;
         }
-        if (dueDate && new Date(dueDate).getTime() < now.getTime() - buffer) {
-            return res.status(400).json({ message: 'Due date and time cannot be in the past' });
+        if (!startDate) {
+            req.body.startDate = now;
+            startDate = now;
         }
+
         if (notificationDate && new Date(notificationDate).getTime() < now.getTime() - buffer) {
             return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
         }
@@ -285,19 +288,17 @@ const adminUpdateBill = async (req, res) => {
         const now = new Date();
         const buffer = 5 * 60 * 1000;
 
-        if (startDate && new Date(startDate).getTime() < now.getTime() - buffer) {
-            return res.status(400).json({ message: 'Start date and time cannot be in the past' });
+        if (req.body.notificationDate) {
+            req.body.dueDate = req.body.notificationDate;
         }
-        if (dueDate && new Date(dueDate).getTime() < now.getTime() - buffer) {
-            return res.status(400).json({ message: 'Due date and time cannot be in the past' });
-        }
-        if (notificationDate && new Date(notificationDate).getTime() < now.getTime() - buffer) {
+
+        if (req.body.notificationDate && new Date(req.body.notificationDate).getTime() < now.getTime() - buffer) {
             return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
         }
 
-        const startVal = startDate ? new Date(startDate) : new Date(bill.startDate);
-        const dueVal = dueDate ? new Date(dueDate) : new Date(bill.dueDate);
-        const notifVal = notificationDate ? new Date(notificationDate) : (bill.notificationDate ? new Date(bill.notificationDate) : null);
+        const startVal = req.body.startDate ? new Date(req.body.startDate) : new Date(bill.startDate);
+        const dueVal = req.body.dueDate ? new Date(req.body.dueDate) : new Date(bill.dueDate);
+        const notifVal = req.body.notificationDate ? new Date(req.body.notificationDate) : (bill.notificationDate ? new Date(bill.notificationDate) : null);
 
         if (dueVal && startVal && dueVal.getTime() < startVal.getTime()) {
             return res.status(400).json({ message: 'Due date must be after the start date' });
