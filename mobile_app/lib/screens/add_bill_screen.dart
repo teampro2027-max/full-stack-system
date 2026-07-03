@@ -435,54 +435,13 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    cat['image'] != null &&
-                                            cat['image'].toString().isNotEmpty
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                            child: Image.network(
-                                              'https://full-stack-system-1ex6.onrender.com${cat['image']}',
-                                              width: 16,
-                                              height: 16,
-                                              fit: BoxFit.cover,
-                                              loadingBuilder:
-                                                  (
-                                                    context,
-                                                    child,
-                                                    loadingProgress,
-                                                  ) {
-                                                    if (loadingProgress == null)
-                                                      return child;
-                                                    return getCategoryIcon(
-                                                      cat['icon'] ?? '📋',
-                                                      color: isSelectedParent
-                                                          ? Colors.white
-                                                          : const Color(
-                                                              0xFF4F46E5,
-                                                            ),
-                                                      size: 16,
-                                                    );
-                                                  },
-                                              errorBuilder: (_, __, ___) =>
-                                                  getCategoryIcon(
-                                                    cat['icon'] ?? '📋',
-                                                    color: isSelectedParent
-                                                        ? Colors.white
-                                                        : const Color(
-                                                            0xFF4F46E5,
-                                                          ),
-                                                    size: 16,
-                                                  ),
-                                            ),
-                                          )
-                                        : getCategoryIcon(
-                                            cat['icon'] ?? '📋',
-                                            color: isSelectedParent
-                                                ? Colors.white
-                                                : const Color(0xFF4F46E5),
-                                            size: 16,
-                                          ),
+                                    getCategoryIcon(
+                                      cat['icon'] ?? '📋',
+                                      color: isSelectedParent
+                                          ? Colors.white
+                                          : const Color(0xFF4F46E5),
+                                      size: 16,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       cat['name'],
@@ -558,54 +517,13 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                   ),
                                   child: Row(
                                     children: [
-                                      cat['image'] != null &&
-                                              cat['image'].toString().isNotEmpty
-                                          ? ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                              child: Image.network(
-                                                'https://full-stack-system-1ex6.onrender.com${cat['image']}',
-                                                width: 14,
-                                                height: 14,
-                                                fit: BoxFit.cover,
-                                                loadingBuilder:
-                                                    (
-                                                      context,
-                                                      child,
-                                                      loadingProgress,
-                                                    ) {
-                                                      if (loadingProgress ==
-                                                          null)
-                                                        return child;
-                                                      return getCategoryIcon(
-                                                        cat['icon'] ?? '📋',
-                                                        color: selected
-                                                            ? Colors.white
-                                                            : const Color(
-                                                                0xFF10B981,
-                                                              ),
-                                                        size: 14,
-                                                      );
-                                                    },
-                                                errorBuilder: (_, __, ___) =>
-                                                    getCategoryIcon(
-                                                      cat['icon'] ?? '📋',
-                                                      color: selected
-                                                          ? Colors.white
-                                                          : const Color(
-                                                              0xFF10B981,
-                                                            ),
-                                                      size: 14,
-                                                    ),
-                                              ),
-                                            )
-                                          : getCategoryIcon(
-                                              cat['icon'] ?? '📋',
-                                              color: selected
-                                                  ? Colors.white
-                                                  : const Color(0xFF10B981),
-                                              size: 14,
-                                            ),
+                                      getCategoryIcon(
+                                        cat['icon'] ?? '📋',
+                                        color: selected
+                                            ? Colors.white
+                                            : const Color(0xFF10B981),
+                                        size: 14,
+                                      ),
                                       const SizedBox(width: 5),
                                       Text(
                                         cat['name'],

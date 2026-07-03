@@ -109,35 +109,73 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final lang = Provider.of<LanguageProvider>(context, listen: false);
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap button to close
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
+        return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(24),
           ),
-          title: Row(
-            children: [
-              Icon(
-                success ? Icons.check_circle : Icons.cancel,
-                color: success ? Colors.green : Colors.red,
-                size: 30,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: TextStyle(color: success ? Colors.green : Colors.red),
-              ),
-            ],
-          ),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              child: Text(lang.t('ok')),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: success ? Colors.green.shade50 : Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    success ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                    color: success ? Colors.green : Colors.red,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  success ? 'Payment Successful' : title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  success
+                      ? 'Your payment was completed successfully.'
+                      : message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.check, size: 18),
+                    label: Text(lang.t('ok')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4F46E5),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
