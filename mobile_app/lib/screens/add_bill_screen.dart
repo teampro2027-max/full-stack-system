@@ -43,14 +43,19 @@ class _AddBillScreenState extends State<AddBillScreen> {
       _isRecurring = b['isRecurring'] ?? false;
       _recurringInterval = b['recurringInterval'] ?? 'monthly';
       if (b['dueDate'] != null) {
-        _dueDate = DateTime.tryParse(b['dueDate']) ?? _dueDate;
+        final parsed = DateTime.tryParse(b['dueDate']);
+        if (parsed != null) _dueDate = parsed;
       }
       if (b['startDate'] != null) {
-        _startDate = DateTime.tryParse(b['startDate']) ?? _startDate;
+        final parsed = DateTime.tryParse(b['startDate']);
+        if (parsed != null) _startDate = parsed;
       }
       if (b['notificationDate'] != null) {
-        _notificationDate = DateTime.tryParse(b['notificationDate']);
-        _setReminder = _notificationDate != null;
+        final parsed = DateTime.tryParse(b['notificationDate']);
+        if (parsed != null) {
+          _notificationDate = parsed;
+          _setReminder = true;
+        }
       }
     }
     // Ensure categories are loaded and find parentId if editing a subcategory

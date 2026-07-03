@@ -77,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               children: [
-                const Icon(Icons.shield_alert, color: Colors.red, size: 28),
+                const Icon(Icons.block, color: Colors.red, size: 28),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
