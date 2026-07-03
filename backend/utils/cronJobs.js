@@ -60,6 +60,11 @@ const setupCronJobs = () => {
             }).populate('userId', 'name email');
 
             for (let bill of recurringBillsToReset) {
+                if (!bill.userId) {
+                    console.log(`Skipping recurring reset for bill ${bill._id} because userId is missing.`);
+                    continue;
+                }
+
                 // Reset back to unpaid
                 bill.status = 'unpaid';
                 // Set the new due date to today (or + X days if you want a grace period, e.g. + 5)
@@ -68,8 +73,8 @@ const setupCronJobs = () => {
                 bill.lastPaidDate = null;
                 await bill.save();
 
-                const userName = bill.userId?.name || 'Macaamiil';
-                const userEmail = bill.userId?.email;
+                const userName = bill.userId.name || 'Macaamiil';
+                const userEmail = bill.userId.email;
                 const msg = `Waqtigii lacag bixinta biilkaaga "${bill.title}" waa la gaaray (30 maalmood ayaa dhammaatay). Fadlan bixi $${bill.amount}.`;
                 
                 // In-App Notification

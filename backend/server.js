@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -7,6 +7,36 @@ const connectDB = require('./config/db');
 
 dotenv.config({ override: true });
 connectDB();
+
+// Auto-seed default admin and user if database has no users
+mongoose.connection.once('open', async () => {
+    try {
+        const User = require('./models/User');
+        const userCount = await User.countDocuments();
+        if (userCount === 0) {
+            console.log('Database is empty. Auto-seeding default admin and test users...');
+            const bcrypt = require('bcryptjs');
+            const adminPassword = await bcrypt.hash('admin123', 10);
+            await User.create({
+                name: 'System Admin',
+                email: 'admin@admin.com',
+                password: adminPassword,
+                role: 'admin',
+                mfaEnabled: false
+            });
+            const userPassword = await bcrypt.hash('user123', 10);
+            await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: userPassword,
+                role: 'user'
+            });
+            console.log('Database auto-seeded successfully! Admin: admin@admin.com (admin123), User: john@example.com (user123)');
+        }
+    } catch (err) {
+        console.error('Failed to auto-seed database:', err.message);
+    }
+});
 
 const app = express();
 

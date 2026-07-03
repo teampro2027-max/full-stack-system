@@ -23,7 +23,7 @@ services:
       - key: EMAIL_PROVIDER
         value: google_script
       - key: ALLOW_OTP_FALLBACK
-        value: false
+        value: true
       - key: ALLOW_EMAIL_FALLBACK
         value: false
       - key: OFFLINE_MODE
