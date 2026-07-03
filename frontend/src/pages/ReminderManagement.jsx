@@ -40,6 +40,13 @@ const ReminderManagement = () => {
     channel: 'SMS+Push',
   }));
 
+  const formatReminderDate = (value) => {
+    if (!value) return 'Not set';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Not set';
+    return date.toLocaleString();
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -69,33 +76,34 @@ const ReminderManagement = () => {
       </div>
 
       <div className="card">
-        <h2 className="font-semibold mb-4 flex items-center gap-2"><Bell size={16} className="text-indigo-600"/>Active Auto-Campaigns (From Live Data)</h2>
-        <div className="table-wrapper border-0 -mx-6">
-          <table>
-            <thead>
-              <tr><th>Name</th><th>Channel</th><th>Users Target</th><th>Sent</th><th>Schedule</th><th>Status</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-              {loading ? [...Array(3)].map((_, i) => <tr key={i}>{[...Array(7)].map((_, j) => <td key={j}><div className="h-4 bg-slate-100 rounded animate-pulse"/></td>)}</tr>) : 
-               dynamicReminders.length === 0 ? <tr><td colSpan={7} className="text-center py-6 text-slate-400">No upcoming bills to remind.</td></tr> :
-               dynamicReminders.map(r => (
-                <tr key={r.id}>
-                  <td className="font-medium">{r.title}</td>
-                  <td><span className="badge badge-info">{r.channel}</span></td>
-                  <td>{r.users}</td>
-                  <td><span className="text-emerald-600 font-semibold">{r.sent}</span></td>
-                  <td><span className="flex items-center gap-1 text-xs text-slate-500"><Clock size={11}/>{r.scheduled}</span></td>
-                  <td><span className="badge badge-success capitalize">{r.status}</span></td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button className="btn-ghost p-1.5 rounded-lg"><Send size={13} className="text-indigo-500"/></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <h2 className="font-semibold mb-4 flex items-center gap-2"><Bell size={16} className="text-indigo-600"/>Reminder Bills</h2>
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-14 bg-slate-100 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : upcomingBills.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+            No reminder-ready bills were found yet.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {upcomingBills.map((bill) => (
+              <div key={bill._id} className="flex flex-col gap-2 rounded-xl border border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="font-semibold text-slate-900">{bill.title}</div>
+                  <div className="text-sm text-slate-500">{bill.userId?.name || 'Unknown user'} • {bill.category}</div>
+                </div>
+                <div className="text-left md:text-right">
+                  <div className="font-semibold text-indigo-600">${bill.amount}</div>
+                  <div className="text-xs text-slate-500">Reminder: {formatReminderDate(bill.notificationDate || bill.dueDate)}</div>
+                  <div className="text-xs text-slate-500">Due: {formatReminderDate(bill.dueDate)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

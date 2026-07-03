@@ -77,14 +77,19 @@ const getDashboardStats = async (req, res) => {
             .limit(8)
             .lean();
 
-        // Upcoming bills due in next 7 days
+        // Reminder-ready bills: due soon or configured with a reminder date
+        const reminderWindowEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
         const upcoming = await Bill.find({
-            status: 'unpaid',
-            dueDate: { $gte: now, $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) }
+            status: { $ne: 'paid' },
+            $or: [
+                { dueDate: { $gte: now, $lte: reminderWindowEnd } },
+                { notificationDate: { $gte: now, $lte: reminderWindowEnd } },
+                { notificationDate: { $exists: true, $ne: null }, dueDate: { $gte: now } }
+            ]
         })
             .populate('userId', 'name phone')
-            .sort({ dueDate: 1 })
-            .limit(5)
+            .sort({ notificationDate: 1, dueDate: 1 })
+            .limit(10)
             .lean();
 
         res.json({
