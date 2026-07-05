@@ -204,14 +204,50 @@ class _AddBillScreenState extends State<AddBillScreen> {
         await billProvider.addBill(data);
       }
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      _showSuccessDialog(
+        widget.existingBill != null,
+        _titleController.text.trim(),
+        _amountController.text.trim(),
+      );
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _showSuccessDialog(bool isEditing, String billTitle, String amount) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (context, anim1, anim2, child) {
+        final curvedAnim = CurvedAnimation(
+          parent: anim1,
+          curve: Curves.elasticOut,
+        );
+        return Transform.scale(
+          scale: curvedAnim.value,
+          child: Opacity(
+            opacity: anim1.value.clamp(0.0, 1.0),
+            child: _BillResultDialog(
+              isEditing: isEditing,
+              billTitle: billTitle,
+              amount: amount,
+              onDone: () {
+                Navigator.of(context).pop(); // pop dialog
+                Navigator.of(this.context).pop(true); // pop add bill screen
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -912,4 +948,240 @@ class _AddBillScreenState extends State<AddBillScreen> {
       borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2),
     ),
   );
+}
+
+class _BillResultDialog extends StatefulWidget {
+  final bool isEditing;
+  final String billTitle;
+  final String amount;
+  final VoidCallback onDone;
+
+  const _BillResultDialog({
+    required this.isEditing,
+    required this.billTitle,
+    required this.amount,
+    required this.onDone,
+  });
+
+  @override
+  State<_BillResultDialog> createState() => _BillResultDialogState();
+}
+
+class _BillResultDialogState extends State<_BillResultDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _iconController;
+  late Animation<double> _iconScale;
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _iconController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _iconScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _iconController, curve: Curves.elasticOut),
+    );
+
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _glowAnimation = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) _iconController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _iconController.dispose();
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const primaryColor = Color(0xFF10B981);
+    const gradientColors = [Color(0xFF10B981), Color(0xFF059669)];
+
+    final title = widget.isEditing
+        ? 'Biilka Waa La Cusboonaysiiyey!'
+        : 'Biilka Waa La Diwaangeliyey!';
+    final description = widget.isEditing
+        ? 'Biilkaaga si guul leh ayaa loo cusboonaysiiyey.'
+        : 'Biilkaaga cusub si guul leh ayaa loo kaydiyey.';
+
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withOpacity(0.2),
+              blurRadius: 40,
+              spreadRadius: 5,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Animated Icon with Glow
+              AnimatedBuilder(
+                animation: Listenable.merge([_iconScale, _glowAnimation]),
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _iconScale.value,
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: gradientColors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.greenAccent,
+                            blurRadius: 24,
+                            spreadRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Title
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF111827),
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Bill Details Box
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      widget.billTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF111827),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (widget.amount.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '\$${widget.amount}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF059669),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: widget.onDone,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ).copyWith(
+                    backgroundColor: WidgetStateProperty.all(Colors.transparent),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: gradientColors),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Dhammaystir',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
