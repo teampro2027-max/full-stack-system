@@ -61,6 +61,10 @@ const billSchema = new mongoose.Schema({
     },
     notificationDate: {
         type: Date
+    },
+    reminderEnabled: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

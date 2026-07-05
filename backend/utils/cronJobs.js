@@ -6,6 +6,7 @@ const { sendBillReminderEmail } = require('./emailService');
 
 const processReminderBills = async (now = new Date()) => {
     const billsToProcess = await Bill.find({
+        reminderEnabled: true,
         notificationDate: { $exists: true, $ne: null, $lte: now }
     }).populate('userId', 'name email');
 
@@ -59,6 +60,42 @@ const processReminderBills = async (now = new Date()) => {
 
         await bill.save();
         console.log(`Processed reminder/reset for bill ${bill._id}`);
+    }
+
+    return billsToProcess.length;
+};
+
+const process30DayCycleBills = async (now = new Date()) => {
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const billsToProcess = await Bill.find({
+        status: 'paid',
+        reminderEnabled: { $ne: true },
+        lastPaidDate: { $exists: true, $ne: null, $lte: thirtyDaysAgo }
+    }).populate('userId', 'name email');
+
+    for (let bill of billsToProcess) {
+        if (!bill.userId) {
+            console.log(`Skipping 30-day cycle for bill ${bill._id} because userId is missing.`);
+            continue;
+        }
+
+        bill.status = 'unpaid';
+        bill.lastPaidDate = null;
+
+        const msg = `Xasuusin: Biilkaaga "${bill.title}" waxaa dhaafay 30 maalmood tan iyo markii la bixiyay. Hadda waad bixin kartaa ($${bill.amount}).`;
+
+        await Notification.create({
+            userId: bill.userId._id,
+            title: 'Xasuusin Biil',
+            message: msg
+        });
+
+        await sendPushNotification(bill.userId._id, 'Xasuusin Biil', msg);
+
+        await bill.save();
+        console.log(`Processed 30-day cycle reset for bill ${bill._id}`);
     }
 
     return billsToProcess.length;
@@ -123,6 +160,8 @@ const setupCronJobs = () => {
             const now = new Date();
             const processedCount = await processReminderBills(now);
             console.log(`Processed ${processedCount} reminder/reset bill(s)`);
+            const cycleCount = await process30DayCycleBills(now);
+            console.log(`Processed ${cycleCount} 30-day cycle bill(s)`);
         } catch (error) {
             console.error('Error running minute-by-minute reminder cron job:', error.message);
         }
@@ -131,3 +170,4 @@ const setupCronJobs = () => {
 
 module.exports = setupCronJobs;
 module.exports.processReminderBills = processReminderBills;
+module.exports.process30DayCycleBills = process30DayCycleBills;

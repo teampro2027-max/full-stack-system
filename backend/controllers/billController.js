@@ -36,7 +36,7 @@ const getBills = async (req, res) => {
 };
 
 const createBill = async (req, res) => {
-    let { title, amount, dueDate, category, isRecurring, recurringInterval, notes, startDate, notificationDate } = req.body;
+    let { title, amount, dueDate, category, isRecurring, recurringInterval, notes, startDate, notificationDate, reminderEnabled } = req.body;
     
     const targetUserId = (req.user.role === 'admin' && req.body.userId) ? req.body.userId : req.user._id;
 
@@ -46,15 +46,17 @@ const createBill = async (req, res) => {
     const resolvedDates = resolveBillDates({ dueDate, notificationDate, startDate, now });
     const { dueDate: resolvedDueDate, notificationDate: resolvedNotificationDate, startDate: resolvedStartDate } = resolvedDates;
 
-    if (resolvedNotificationDate && resolvedNotificationDate.getTime() < now.getTime() - buffer) {
-        return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
+    if (reminderEnabled) {
+        if (resolvedNotificationDate && resolvedNotificationDate.getTime() < now.getTime() - buffer) {
+            return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
+        }
+        if (resolvedNotificationDate && resolvedNotificationDate.getTime() < resolvedStartDate.getTime()) {
+            return res.status(400).json({ message: 'Notification date must be after the start date' });
+        }
     }
     
     if (resolvedDueDate && resolvedDueDate.getTime() < resolvedStartDate.getTime()) {
         return res.status(400).json({ message: 'Due date must be after the start date' });
-    }
-    if (resolvedNotificationDate && resolvedNotificationDate.getTime() < resolvedStartDate.getTime()) {
-        return res.status(400).json({ message: 'Notification date must be after the start date' });
     }
 
     try {
@@ -68,7 +70,8 @@ const createBill = async (req, res) => {
             recurringInterval: recurringInterval || 'monthly',
             notes: notes || '',
             startDate: resolvedStartDate,
-            notificationDate: resolvedNotificationDate || undefined
+            notificationDate: reminderEnabled ? (resolvedNotificationDate || undefined) : undefined,
+            reminderEnabled: reminderEnabled || false
         });
 
         // Create in-app notification for the user
@@ -105,6 +108,12 @@ const updateBill = async (req, res) => {
 
         const now = new Date();
         const buffer = 5 * 60 * 1000;
+        const { reminderEnabled } = req.body;
+
+        if (reminderEnabled === false) {
+            req.body.notificationDate = null;
+        }
+
         const resolvedDates = resolveBillDates({
             dueDate: req.body.dueDate,
             notificationDate: req.body.notificationDate,
@@ -114,15 +123,17 @@ const updateBill = async (req, res) => {
         });
         const { dueDate: resolvedDueDate, notificationDate: resolvedNotificationDate, startDate: resolvedStartDate } = resolvedDates;
 
-        if (resolvedNotificationDate && resolvedNotificationDate.getTime() < now.getTime() - buffer) {
-            return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
+        if (reminderEnabled !== false) {
+            if (resolvedNotificationDate && resolvedNotificationDate.getTime() < now.getTime() - buffer) {
+                return res.status(400).json({ message: 'Notification date and time cannot be in the past' });
+            }
+            if (resolvedNotificationDate && resolvedNotificationDate.getTime() < resolvedStartDate.getTime()) {
+                return res.status(400).json({ message: 'Notification date must be after the start date' });
+            }
         }
 
         if (resolvedDueDate && resolvedDueDate.getTime() < resolvedStartDate.getTime()) {
             return res.status(400).json({ message: 'Due date must be after the start date' });
-        }
-        if (resolvedNotificationDate && resolvedNotificationDate.getTime() < resolvedStartDate.getTime()) {
-            return res.status(400).json({ message: 'Notification date must be after the start date' });
         }
 
         req.body.dueDate = resolvedDueDate;

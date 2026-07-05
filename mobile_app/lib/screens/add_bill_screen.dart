@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/bill_provider.dart';
 import '../providers/language_provider.dart';
+import '../services/api_service.dart';
 import '../utils/category_helpers.dart';
 
 class AddBillScreen extends StatefulWidget {
@@ -22,8 +23,8 @@ class _AddBillScreenState extends State<AddBillScreen> {
   String _selectedParentId = '';
   DateTime _startDate = DateTime.now();
   DateTime _dueDate = DateTime.now().add(const Duration(days: 7));
-  DateTime? _notificationDate = DateTime.now().add(const Duration(days: 1));
-  bool _setReminder = true;
+  DateTime? _notificationDate;
+  bool _setReminder = false;
 
   bool _isRecurring = false;
   String _recurringInterval = 'monthly';
@@ -42,6 +43,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
       _category = b['category'] ?? '';
       _isRecurring = b['isRecurring'] ?? false;
       _recurringInterval = b['recurringInterval'] ?? 'monthly';
+      _setReminder = b['reminderEnabled'] == true;
       if (b['dueDate'] != null) {
         final parsed = DateTime.tryParse(b['dueDate']);
         if (parsed != null) _dueDate = parsed;
@@ -134,29 +136,16 @@ class _AddBillScreenState extends State<AddBillScreen> {
     final now = DateTime.now();
     final buffer = const Duration(minutes: 5);
 
-    if (_notificationDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a reminder date and time')),
-      );
-      return;
-    }
-
-    if (widget.existingBill == null) {
-      if (_notificationDate!.isBefore(now.subtract(buffer))) {
+    // Only validate notificationDate when reminder is ON
+    if (_setReminder) {
+      if (_notificationDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reminder date and time cannot be in the past'),
-          ),
+          const SnackBar(content: Text('Fadlan dooro waqtiga iyo taariikhda Reminder-ka')),
         );
         return;
       }
-    } else {
-      final originalNotifStr = widget.existingBill!['notificationDate'];
-      final originalNotif = originalNotifStr != null
-          ? DateTime.tryParse(originalNotifStr)
-          : null;
-      if (originalNotif == null ||
-          _notificationDate!.isAtSameMomentAs(originalNotif) == false) {
+
+      if (widget.existingBill == null) {
         if (_notificationDate!.isBefore(now.subtract(buffer))) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -164,6 +153,22 @@ class _AddBillScreenState extends State<AddBillScreen> {
             ),
           );
           return;
+        }
+      } else {
+        final originalNotifStr = widget.existingBill!['notificationDate'];
+        final originalNotif = originalNotifStr != null
+            ? DateTime.tryParse(originalNotifStr)
+            : null;
+        if (originalNotif == null ||
+            _notificationDate!.isAtSameMomentAs(originalNotif) == false) {
+          if (_notificationDate!.isBefore(now.subtract(buffer))) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Reminder date and time cannot be in the past'),
+              ),
+            );
+            return;
+          }
         }
       }
     }
@@ -179,12 +184,17 @@ class _AddBillScreenState extends State<AddBillScreen> {
       'amount': double.parse(_amountController.text),
       'dueDate': _dueDate.toIso8601String(),
       'startDate': resolvedStartDate.toIso8601String(),
-      'notificationDate': _notificationDate!.toIso8601String(),
       'category': _category,
       'isRecurring': _isRecurring,
       'recurringInterval': _recurringInterval,
       'notes': _notesController.text.trim(),
+      'reminderEnabled': _setReminder,
     };
+
+    // Only include notificationDate when reminder is ON
+    if (_setReminder && _notificationDate != null) {
+      data['notificationDate'] = _notificationDate!.toIso8601String();
+    }
 
     try {
       final billProvider = Provider.of<BillProvider>(context, listen: false);
@@ -377,7 +387,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
                     children: [
                       // Parent Categories Selector
                       SizedBox(
-                        height: 96,
+                        height: 100,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: parentCategories.length,
@@ -390,6 +400,10 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                     _category == cat['key']);
                             final label = (cat['name'] ?? cat['key'] ?? '')
                                 .toString();
+                            final hasImage = cat['image'] != null && cat['image'].toString().isNotEmpty;
+                            final imageUrl = hasImage
+                                ? '${ApiService.baseUrl.replaceAll('/api', '')}${cat['image']}'
+                                : null;
                             return GestureDetector(
                               onTap: () {
                                 final subs = allCategories
@@ -411,8 +425,8 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                 duration: const Duration(milliseconds: 200),
                                 width: 96,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 10,
+                                  horizontal: 6,
+                                  vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelectedParent
@@ -440,14 +454,32 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    getCategoryIcon(
-                                      cat['icon'] ?? '📋',
-                                      color: isSelectedParent
-                                          ? Colors.white
-                                          : const Color(0xFF4F46E5),
-                                      size: 22,
-                                    ),
-                                    const SizedBox(height: 8),
+                                    if (hasImage)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          imageUrl!,
+                                          width: 32,
+                                          height: 32,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => getCategoryIcon(
+                                            cat['icon'] ?? '📋',
+                                            color: isSelectedParent
+                                                ? Colors.white
+                                                : const Color(0xFF4F46E5),
+                                            size: 22,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      getCategoryIcon(
+                                        cat['icon'] ?? '📋',
+                                        color: isSelectedParent
+                                            ? Colors.white
+                                            : const Color(0xFF4F46E5),
+                                        size: 22,
+                                      ),
+                                    const SizedBox(height: 6),
                                     Text(
                                       label,
                                       textAlign: TextAlign.center,
@@ -457,7 +489,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                         color: isSelectedParent
                                             ? Colors.white
                                             : Colors.grey.shade700,
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -474,7 +506,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
                         const SizedBox(height: 12),
                         _label('Subcategory'),
                         SizedBox(
-                          height: 96,
+                          height: 100,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: allCategories
@@ -494,6 +526,10 @@ class _AddBillScreenState extends State<AddBillScreen> {
                               final selected = _category == cat['key'];
                               final label = (cat['name'] ?? cat['key'] ?? '')
                                   .toString();
+                              final hasImage = cat['image'] != null && cat['image'].toString().isNotEmpty;
+                              final imageUrl = hasImage
+                                  ? '${ApiService.baseUrl.replaceAll('/api', '')}${cat['image']}'
+                                  : null;
                               return GestureDetector(
                                 onTap: () =>
                                     setState(() => _category = cat['key']),
@@ -501,8 +537,8 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                   duration: const Duration(milliseconds: 200),
                                   width: 96,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 10,
+                                    horizontal: 6,
+                                    vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
                                     color: selected
@@ -531,14 +567,32 @@ class _AddBillScreenState extends State<AddBillScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.center,
                                     children: [
-                                      getCategoryIcon(
-                                        cat['icon'] ?? '📋',
-                                        color: selected
-                                            ? Colors.white
-                                            : const Color(0xFF10B981),
-                                        size: 20,
-                                      ),
-                                      const SizedBox(height: 8),
+                                      if (hasImage)
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Image.network(
+                                            imageUrl!,
+                                            width: 32,
+                                            height: 32,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => getCategoryIcon(
+                                              cat['icon'] ?? '📋',
+                                              color: selected
+                                                  ? Colors.white
+                                                  : const Color(0xFF10B981),
+                                              size: 20,
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        getCategoryIcon(
+                                          cat['icon'] ?? '📋',
+                                          color: selected
+                                              ? Colors.white
+                                              : const Color(0xFF10B981),
+                                          size: 20,
+                                        ),
+                                      const SizedBox(height: 6),
                                       Text(
                                         label,
                                         textAlign: TextAlign.center,
@@ -595,53 +649,125 @@ class _AddBillScreenState extends State<AddBillScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Dates: Start Date & Due Date Row has been hidden.
-              // We only display the Reminder Date & Time selector directly.
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _label('Reminder Date & Time'),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () async {
-                      final dt = await _pickDateTime(
-                        _notificationDate ??
-                            DateTime.now().add(const Duration(days: 1)),
-                      );
-                      if (dt != null) setState(() => _notificationDate = dt);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.notifications_active,
-                            size: 14,
-                            color: Colors.indigo,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              _notificationDate == null
-                                  ? 'Select Reminder Date & Time'
-                                  : '${_notificationDate!.day}/${_notificationDate!.month}/${_notificationDate!.year} ${_notificationDate!.hour.toString().padLeft(2, '0')}:${_notificationDate!.minute.toString().padLeft(2, '0')}',
-                              style: const TextStyle(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
+              // Reminder ON/OFF Toggle
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade100),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _setReminder
+                                  ? Icons.notifications_active
+                                  : Icons.notifications_off_outlined,
+                              size: 20,
+                              color: _setReminder
+                                  ? const Color(0xFF4F46E5)
+                                  : Colors.grey.shade400,
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Reminder',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        Switch(
+                          value: _setReminder,
+                          onChanged: (v) => setState(() {
+                            _setReminder = v;
+                            if (!v) _notificationDate = null;
+                          }),
+                          activeColor: const Color(0xFF4F46E5),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    if (!_setReminder) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.amber.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 16, color: Colors.amber.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Biilkan waxaa loo tirin doonaa 30 malin kadib markii la bixiyo',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.amber.shade800,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (_setReminder) ...[
+                      const Divider(height: 16),
+                      GestureDetector(
+                        onTap: () async {
+                          final dt = await _pickDateTime(
+                            _notificationDate ??
+                                DateTime.now().add(const Duration(days: 1)),
+                          );
+                          if (dt != null) setState(() => _notificationDate = dt);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_month,
+                                size: 16,
+                                color: Color(0xFF4F46E5),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _notificationDate == null
+                                      ? 'Dooro Taariikhda & Waqtiga'
+                                      : '${_notificationDate!.day}/${_notificationDate!.month}/${_notificationDate!.year} ${_notificationDate!.hour.toString().padLeft(2, '0')}:${_notificationDate!.minute.toString().padLeft(2, '0')}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _notificationDate == null
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade800,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
 
