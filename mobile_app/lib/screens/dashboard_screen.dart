@@ -13,6 +13,7 @@ import 'profile_screen.dart';
 import 'notification_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
+import 'support_screen.dart';
 import '../providers/notification_provider.dart';
 import '../utils/category_helpers.dart';
 
@@ -659,6 +660,11 @@ class _DashboardScreenState extends State<DashboardScreen>
             icon: Icons.settings_outlined,
             title: lang.t('settings'),
             onTap: () => _openDrawerScreen(const SettingsScreen()),
+          ),
+          _drawerItem(
+            icon: Icons.support_agent_outlined,
+            title: lang.t('supportHelp'),
+            onTap: () => _openDrawerScreen(const SupportScreen()),
           ),
           const Spacer(),
           const Divider(height: 1),

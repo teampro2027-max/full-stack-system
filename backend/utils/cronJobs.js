@@ -4,6 +4,25 @@ const Notification = require('../models/Notification');
 const { sendPushNotification } = require('../controllers/notificationController');
 const { sendBillReminderEmail } = require('./emailService');
 
+const resolveReminderBillState = (bill, now = new Date()) => {
+    const reminderTime = bill.notificationDate ? new Date(bill.notificationDate) : null;
+    const isDue = reminderTime && reminderTime.getTime() <= now.getTime();
+
+    if (!isDue) {
+        return { status: bill.status, shouldNotify: false, shouldResetReminder: false };
+    }
+
+    const wasPaid = bill.status === 'paid';
+    const nextStatus = bill.status === 'paid' ? 'unpaid' : 'overdue';
+
+    return {
+        status: nextStatus,
+        shouldNotify: true,
+        shouldResetReminder: true,
+        wasPaid,
+    };
+};
+
 const processReminderBills = async (now = new Date()) => {
     const billsToProcess = await Bill.find({
         reminderEnabled: true,
@@ -16,10 +35,14 @@ const processReminderBills = async (now = new Date()) => {
             continue;
         }
 
-        const wasPaid = bill.status === 'paid';
-        if (wasPaid) {
-            bill.status = 'unpaid';
-            bill.lastPaidDate = null;
+        const reminderState = resolveReminderBillState(bill, now);
+        const wasPaid = reminderState.wasPaid;
+
+        if (reminderState.shouldNotify) {
+            bill.status = reminderState.status;
+            if (wasPaid) {
+                bill.lastPaidDate = null;
+            }
         }
 
         const userName = bill.userId.name || 'Macaamiil';
@@ -45,7 +68,7 @@ const processReminderBills = async (now = new Date()) => {
         }
 
         // Update dates for next cycle (if recurring) or clear reminder (if one-time)
-        if (bill.isRecurring) {
+        if (bill.isRecurring && reminderState.shouldResetReminder) {
             const nextDate = new Date(bill.notificationDate);
             if (bill.recurringInterval === 'yearly') {
                 nextDate.setFullYear(nextDate.getFullYear() + 1);
@@ -54,7 +77,7 @@ const processReminderBills = async (now = new Date()) => {
             }
             bill.notificationDate = nextDate;
             bill.dueDate = nextDate;
-        } else {
+        } else if (reminderState.shouldResetReminder) {
             bill.notificationDate = null;
         }
 
@@ -171,3 +194,4 @@ const setupCronJobs = () => {
 module.exports = setupCronJobs;
 module.exports.processReminderBills = processReminderBills;
 module.exports.process30DayCycleBills = process30DayCycleBills;
+module.exports.resolveReminderBillState = resolveReminderBillState;

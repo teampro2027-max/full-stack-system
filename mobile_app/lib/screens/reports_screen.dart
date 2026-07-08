@@ -46,6 +46,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _fetchReport();
 
     Future.microtask(() {
+      if (!mounted) return;
       final auth = Provider.of<AuthProvider>(context, listen: false);
       if (auth.user?['role'] == 'admin') {
         _fetchUserActivity();
@@ -63,22 +64,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load user activity report')));
-      }
+      _showSnack('Failed to load user activity report');
     } finally {
       if (mounted) setState(() => _loadingUserActivity = false);
     }
   }
 
   Future<void> _fetchReport() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final monthParam = _reportType == 'Annual' ? '' : '&month=$_selectedMonth';
       final data = await ApiService.get('/reports/monthly?year=$_selectedYear$monthParam');
+      if (!mounted) return;
       setState(() => _reportData = data);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load report summary')));
+      _showSnack('Failed to load report summary');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -87,16 +88,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Future<void> _searchPhone() async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fadlan gali nambar')));
+      _showSnack('Fadlan gali nambar');
       return;
     }
 
+    if (!mounted) return;
     setState(() => _searchingPhone = true);
     try {
       final data = await ApiService.get('/reports/phone/$phone');
+      if (!mounted) return;
       setState(() => _phoneReportData = data);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Baaritaanka waa ku fashilmay: $e')));
+      _showSnack('Baaritaanka waa ku fashilmay: $e');
     } finally {
       if (mounted) setState(() => _searchingPhone = false);
     }
@@ -104,14 +107,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _exportPdf() async {
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Generating PDF Report...'), duration: Duration(seconds: 1)));
+      _showSnack('Generating PDF Report...', duration: const Duration(seconds: 1));
 
       final monthParam = _reportType == 'Annual' ? '' : '&month=$_selectedMonth';
       final data = await ApiService.getBytes('/reports/export-pdf?year=$_selectedYear$monthParam');
       await DownloadHelper.downloadFile(data, 'report-$_selectedYear-${_reportType == 'Annual' ? 'Annual' : _selectedMonth}.pdf');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      _showSnack('Export failed: $e');
     }
   }
 
@@ -119,13 +121,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final number = _phoneReportData?['phoneNumber'];
     if (number == null) return;
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Generating Phone Report PDF...'), duration: Duration(seconds: 1)));
+      _showSnack('Generating Phone Report PDF...', duration: const Duration(seconds: 1));
 
       final data = await ApiService.getBytes('/reports/phone/$number/export');
       await DownloadHelper.downloadFile(data, 'phone-report-$number.pdf');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      _showSnack('Export failed: $e');
     }
   }
 
@@ -160,6 +161,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
             _buildPhoneSearchTab(),
             if (isAdmin) _buildUserActivityTab(),
           ],
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+            child: ElevatedButton.icon(
+              onPressed: _showSupportChart,
+              icon: const Icon(Icons.bar_chart),
+              label: const Text('Support Chart', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4F46E5),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -427,6 +443,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       const SizedBox(height: 12),
                       _buildAllTransactionsList(_reportData!['payments'] as List?),
                       const SizedBox(height: 32),
+                      // Show inline support chart on narrow (mobile) screens
+                      if (MediaQuery.of(context).size.width < 560) ...[
+                        _buildSupportChartWidget(),
+                        const SizedBox(height: 16),
+                      ],
                       ElevatedButton.icon(
                         onPressed: _exportPdf,
                         icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
@@ -734,6 +755,100 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showSupportChart() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        height: MediaQuery.of(context).size.height * 0.5,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 12),
+            const Center(child: Text('Support Chart', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+            const SizedBox(height: 18),
+            Expanded(
+              child: Center(
+                child: SizedBox(
+                  height: 220,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      for (final h in [60.0, 120.0, 90.0, 150.0, 110.0])
+                        Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 6),
+                            height: h,
+                            decoration: BoxDecoration(color: Colors.indigo.shade400, borderRadius: BorderRadius.circular(6)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSnack(String message, {Duration? duration}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: duration ?? const Duration(seconds: 3)),
+    );
+  }
+
+  Widget _buildSupportChartWidget() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Support Chart', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 140,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (final h in [40.0, 80.0, 60.0, 100.0, 70.0])
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                      height: h,
+                      decoration: BoxDecoration(color: Colors.indigo.shade300, borderRadius: BorderRadius.circular(6)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

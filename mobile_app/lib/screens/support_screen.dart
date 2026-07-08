@@ -3,6 +3,80 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
 
+class SupportChartCard extends StatelessWidget {
+  const SupportChartCard({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final values = [40.0, 72.0, 58.0, 88.0, 64.0];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.bar_chart, color: Color(0xFF4F46E5), size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Support Chart',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your support requests are being handled quickly and clearly.',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 120,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: values.map((value) {
+                return Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    height: value,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(8),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class SupportScreen extends StatefulWidget {
   const SupportScreen({Key? key}) : super(key: key);
 
@@ -53,21 +127,21 @@ class _SupportScreenState extends State<SupportScreen> {
       await ApiService.post('/support', {
         'title': 'Caawinaad / Support Request',
         'message': _messageController.text.trim(),
-        'type': 'support'
+        'type': 'support',
       });
 
       _messageController.clear();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(lang.t('supportSubmitted'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(lang.t('supportSubmitted'))));
       }
       _fetchTickets();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -80,7 +154,10 @@ class _SupportScreenState extends State<SupportScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(lang.t('supportHelp'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          lang.t('supportHelp'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
@@ -107,7 +184,7 @@ class _SupportScreenState extends State<SupportScreen> {
                       color: const Color(0xFF4F46E5).withOpacity(0.3),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
-                    )
+                    ),
                   ],
                 ),
                 child: Column(
@@ -115,24 +192,40 @@ class _SupportScreenState extends State<SupportScreen> {
                   children: [
                     Row(
                       children: const [
-                        Icon(Icons.support_agent, color: Colors.white, size: 28),
+                        Icon(
+                          Icons.support_agent,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                         SizedBox(width: 10),
                         Text(
                           'BillTrack Support',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Text(
                       lang.t('supportDescription'),
-                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, height: 1.4),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 24),
+
+              const SupportChartCard(),
+
+              const SizedBox(height: 20),
 
               // Form to Send Message
               Form(
@@ -166,18 +259,31 @@ class _SupportScreenState extends State<SupportScreen> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
-                          : const Icon(Icons.send, color: Colors.white, size: 18),
+                          : const Icon(
+                              Icons.send,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                       label: Text(
                         _submitting ? '...' : lang.t('submitMessage'),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
                       onPressed: _submitting ? null : _submitSupportRequest,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4F46E5),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ],
@@ -189,7 +295,11 @@ class _SupportScreenState extends State<SupportScreen> {
               // Previous Tickets Section
               Text(
                 lang.t('ticketHistory'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5)),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4F46E5),
+                ),
               ),
               const SizedBox(height: 12),
 
@@ -201,120 +311,153 @@ class _SupportScreenState extends State<SupportScreen> {
                       ),
                     )
                   : _tickets.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(40.0),
-                            child: Column(
-                              children: [
-                                Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey.shade300),
-                                const SizedBox(height: 12),
-                                Text(
-                                  lang.t('noSupportTickets'),
-                                  style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                                ),
-                              ],
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40.0),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 48,
+                              color: Colors.grey.shade300,
                             ),
-                          ),
-                        )
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _tickets.length,
-                          itemBuilder: (ctx, i) {
-                            final ticket = _tickets[i];
-                            final isResolved = ticket['status'] == 'resolved';
-                            final hasReply = ticket['reply'] != null;
+                            const SizedBox(height: 12),
+                            Text(
+                              lang.t('noSupportTickets'),
+                              style: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _tickets.length,
+                      itemBuilder: (ctx, i) {
+                        final ticket = _tickets[i];
+                        final isResolved = ticket['status'] == 'resolved';
+                        final hasReply = ticket['reply'] != null;
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade100),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.02),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  )
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isResolved
+                                          ? Colors.green.shade50
+                                          : Colors.amber.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      isResolved
+                                          ? lang.t('resolved')
+                                          : lang.t('pending'),
+                                      style: TextStyle(
+                                        color: isResolved
+                                            ? Colors.green.shade700
+                                            : Colors.amber.shade700,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    DateTime.parse(
+                                      ticket['createdAt'],
+                                    ).toLocal().toString().substring(0, 16),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ],
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              const SizedBox(height: 12),
+                              Text(
+                                ticket['message'],
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              if (hasReply) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.grey.shade100,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isResolved ? Colors.green.shade50 : Colors.amber.shade50,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          isResolved ? lang.t('resolved') : lang.t('pending'),
-                                          style: TextStyle(
-                                            color: isResolved ? Colors.green.shade700 : Colors.amber.shade700,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        DateTime.parse(ticket['createdAt'])
-                                            .toLocal()
-                                            .toString()
-                                            .substring(0, 16),
-                                        style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    ticket['message'],
-                                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                                  ),
-                                  if (hasReply) ...[
-                                    const SizedBox(height: 12),
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade50,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.grey.shade100),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                      Row(
                                         children: [
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.reply, size: 14, color: Color(0xFF4F46E5)),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                lang.t('adminReply'),
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                  color: Color(0xFF4F46E5),
-                                                ),
-                                              ),
-                                            ],
+                                          const Icon(
+                                            Icons.reply,
+                                            size: 14,
+                                            color: Color(0xFF4F46E5),
                                           ),
-                                          const SizedBox(height: 6),
+                                          const SizedBox(width: 6),
                                           Text(
-                                            ticket['reply'],
-                                            style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
+                                            lang.t('adminReply'),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: Color(0xFF4F46E5),
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        ticket['reply'],
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey.shade700,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
             ],
           ),
         ),
