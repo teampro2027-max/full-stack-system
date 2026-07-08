@@ -126,7 +126,7 @@ class _SupportScreenState extends State<SupportScreen> {
                     const SizedBox(height: 10),
                     Text(
                       lang.t('supportDescription'),
-                      style: const TextStyle(color: Colors.white80, fontSize: 13, height: 1.4),
+                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, height: 1.4),
                     ),
                   ],
                 ),
@@ -244,10 +244,10 @@ class _SupportScreenState extends State<SupportScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.between,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, py: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: isResolved ? Colors.green.shade50 : Colors.amber.shade50,
                                           borderRadius: BorderRadius.circular(8),
