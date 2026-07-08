@@ -361,7 +361,7 @@ const adminConfirmPayment = async (req, res) => {
         );
         if (!payment) return res.status(404).json({ message: 'Payment not found' });
         // Mark bill as paid
-        await Bill.findByIdAndUpdate(payment.billId, { status: 'paid' });
+        await Bill.findByIdAndUpdate(payment.billId, { status: 'paid', lastPaidDate: new Date() });
         res.json({ message: 'Payment confirmed', payment });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });

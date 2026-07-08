@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 const {
     getNotifications,
     markNotificationAsRead,
@@ -12,7 +12,7 @@ const {
 router.get('/', protect, getNotifications);
 router.put('/:id', protect, markNotificationAsRead);
 router.post('/update-token', protect, updateFcmToken);
-router.post('/send', protect, sendNotification); // Consider adding admin protection for this route
-router.post('/broadcast', protect, broadcastNotification); // Consider adding admin protection for this route
+router.post('/send', protect, admin, sendNotification); 
+router.post('/broadcast', protect, admin, broadcastNotification);
 
 module.exports = router;

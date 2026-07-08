@@ -110,4 +110,9 @@ export const deleteCategory = (id) => api.delete(`/categories/${id}`);
 // Reports
 export const getUsersActivityReport = () => api.get('/reports/users-activity');
 
+// Support Messages
+export const getSupportMessages = () => api.get('/support/admin');
+export const replySupportMessage = (id, reply) => api.post(`/support/admin/reply/${id}`, { reply });
+export const broadcastNotification = (data) => api.post('/notifications/broadcast', data);
+
 export default api;

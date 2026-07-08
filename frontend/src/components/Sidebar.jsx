@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Tag, FileText, CreditCard, CheckSquare,
   Bell, BarChart3, TrendingUp, Shield, Globe, Settings, Zap,
-  Lock, LogOut, ChevronDown, ChevronRight, X,
+  Lock, LogOut, ChevronDown, ChevronRight, X, MessageSquare,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useI18n } from '../context/I18nContext';
@@ -35,6 +35,7 @@ const Sidebar = () => {
     { label: t('reminderManagement'), icon: Bell, path: '/reminders' },
     { label: t('reportsAnalytics'), icon: BarChart3, path: '/reports' },
     { label: t('expenseTracking'), icon: TrendingUp, path: '/expenses' },
+    { label: t('supportMessages'), icon: MessageSquare, path: '/support-messages' },
     { label: t('languageSettings'), icon: Globe, path: '/language' },
     { label: t('systemSettings'), icon: Settings, path: '/settings' },
     { label: t('evcPlusIntegration'), icon: Zap, path: '/evc-plus' },

@@ -19,6 +19,7 @@ import ExpenseTracking from './pages/ExpenseTracking';
 import SystemSettings from './pages/SystemSettings';
 import EVCPlus from './pages/EVCPlus';
 import LanguageSettings from './pages/LanguageSettings';
+import SupportMessages from './pages/SupportMessages';
 
 function AppInner() {
   const theme = useStore((s) => s.theme);
@@ -42,6 +43,7 @@ function AppInner() {
             <Route path="reminders" element={<ReminderManagement />} />
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="expenses" element={<ExpenseTracking />} />
+            <Route path="support-messages" element={<SupportMessages />} />
             <Route path="language" element={<LanguageSettings />} />
             <Route path="settings" element={<SystemSettings />} />
             <Route path="evc-plus" element={<EVCPlus />} />

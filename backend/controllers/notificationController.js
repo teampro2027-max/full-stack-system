@@ -63,23 +63,52 @@ const sendNotification = async (req, res) => {
 const broadcastNotification = async (req, res) => {
     try {
         const { title, body, data } = req.body;
+        if (!body) {
+            return res.status(400).json({ message: 'Notification body is required' });
+        }
 
-        const users = await User.find({ fcmToken: { $exists: true, $ne: null } });
-        const tokens = users.map(u => u.fcmToken);
+        // 1. Get all customer users (role = 'user')
+        const users = await User.find({ role: 'user' });
 
-        if (tokens.length === 0) return res.status(404).json({ message: 'No tokens found' });
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'No customer users found to broadcast to' });
+        }
 
-        const message = {
-            notification: { title, body },
-            data: data || {},
-            tokens: tokens
-        };
+        // 2. Save Notification in MongoDB for each user
+        const notificationPromises = users.map(user => {
+            return Notification.create({
+                userId: user._id,
+                title: title || 'Ogeysiis Cusub / Announcement',
+                message: body,
+                status: 'unread'
+            });
+        });
+        await Promise.all(notificationPromises);
 
-        const response = await admin.messaging().sendMulticast(message);
+        // 3. Attempt FCM push notifications
+        const tokens = users.map(u => u.fcmToken).filter(t => !!t);
+        let pushResponse = { successCount: 0, failureCount: 0 };
+        
+        if (tokens.length > 0) {
+            try {
+                const message = {
+                    notification: { title: title || 'Ogeysiis Cusub', body: body },
+                    data: data || {},
+                    tokens: tokens
+                };
+                const fcmRes = await admin.messaging().sendMulticast(message);
+                pushResponse.successCount = fcmRes.successCount;
+                pushResponse.failureCount = fcmRes.failureCount;
+            } catch (fcmError) {
+                console.warn('FCM multicast warning (likely not configured or invalid cert):', fcmError.message);
+            }
+        }
+
         res.json({ 
-            message: 'Broadcast completed', 
-            successCount: response.successCount,
-            failureCount: response.failureCount 
+            message: 'Broadcast completed and saved to database', 
+            recipientCount: users.length,
+            pushSuccessCount: pushResponse.successCount,
+            pushFailureCount: pushResponse.failureCount 
         });
     } catch (error) {
         console.error(error);

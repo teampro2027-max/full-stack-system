@@ -56,6 +56,7 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
+app.use('/api/support', require('./routes/supportRoutes'));
 
 // Setup Cron Jobs
 const setupCronJobs = require('./utils/cronJobs');

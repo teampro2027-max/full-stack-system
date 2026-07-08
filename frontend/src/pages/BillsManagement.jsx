@@ -158,19 +158,26 @@ const BillsManagement = () => {
     }
 
     setSaving(true);
+    const payload = {
+      ...form,
+      startDate: form.startDate ? new Date(form.startDate).toISOString() : undefined,
+      dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : undefined,
+      notificationDate: form.notificationDate ? new Date(form.notificationDate).toISOString() : null,
+    };
+
     try {
       if (editBill) {
         if (isAdmin) {
-          await updateAdminBill(editBill._id, form);
+          await updateAdminBill(editBill._id, payload);
         } else {
-          await updateUserBill(editBill._id, form);
+          await updateUserBill(editBill._id, payload);
         }
         setDialogConfig({ type: 'success', message: 'Bill updated successfully' });
       } else {
         if (isAdmin) {
-          await createAdminBill(form);
+          await createAdminBill(payload);
         } else {
-          await createUserBill(form);
+          await createUserBill(payload);
         }
         setDialogConfig({ type: 'success', message: 'Bill created successfully' });
       }

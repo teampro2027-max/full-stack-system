@@ -13,6 +13,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/reports_screen.dart';
+import 'screens/support_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,6 +98,7 @@ class MultiBillApp extends StatelessWidget {
           '/register': (context) => const RegisterScreen(),
           '/dashboard': (context) => const DashboardScreen(),
           '/reports': (context) => const ReportsScreen(),
+          '/support': (context) => const SupportScreen(),
         },
       ),
     );

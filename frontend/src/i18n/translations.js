@@ -18,7 +18,9 @@ export const en = {
   activeBills: 'Active Bills',
   paidBills: 'Paid Bills',
   overdueBills: 'Overdue Bills',
-  monthlyRevenue: 'Monthly Revenue',
+  monthlyRevenue: 'Monthly bills',
+  supportMessages: 'Support Messages',
+  broadcastAnnouncement: 'Broadcast Announcement',
   pendingPayments: 'Pending Payments',
   upcomingReminders: 'Upcoming Reminders',
   recentActivities: 'Recent Activities',
@@ -35,6 +37,8 @@ export const en = {
   lastLogin: 'Last Login', viewAll: 'View All', noData: 'No data available', loading: 'Loading...',
   amount: 'Amount', date: 'Date', category: 'Category', description: 'Description',
   transactionId: 'Transaction ID', paymentMethod: 'Payment Method', user: 'User', billCount: 'Bill Count',
+  userDetails: 'User Details', registrationDate: 'Registration Date', daysRegistered: 'Days Registered', totalBills: 'Total Bills',
+  day: 'day', days: 'days',
 };
 
 export const so = {
@@ -57,7 +61,9 @@ export const so = {
   activeBills: 'Biilasha Firfircoon',
   paidBills: 'Biilasha la Bixiyey',
   overdueBills: 'Biilasha Dhaafsaday',
-  monthlyRevenue: 'Dakhliga Bishii',
+  monthlyRevenue: 'Biilasha Bishii',
+  supportMessages: 'Fariimaha Caawinaada',
+  broadcastAnnouncement: 'Baahin Ogeysiis',
   pendingPayments: 'Lacag-bixinta Sugeysa',
   upcomingReminders: 'Xasuusiyada Soo Socda',
   recentActivities: 'Howlaha Dhowaan',
@@ -74,6 +80,8 @@ export const so = {
   lastLogin: 'Gelitaankii u dambeeya', viewAll: 'Arag Dhammaan', noData: 'Wax xog ah ma jiro', loading: 'Waa la rarayo...',
   amount: 'Xaddiga', date: 'Taariikhda', category: 'Qaybta', description: 'Sharaxaad',
   transactionId: 'Lambarka Macaamilka', paymentMethod: 'Hab Lacag-bixinta', user: 'Isticmaale', billCount: 'Tirada Biilasha',
+  userDetails: 'Faahfaahinta Isticmaalaha', registrationDate: 'Taariikhda Diiwaangelinta', daysRegistered: 'Maalmaha Diiwaangashan', totalBills: 'Wadarta Biilasha',
+  day: 'maalin', days: 'maalmood',
 };
 
 export const translations = { en, so };

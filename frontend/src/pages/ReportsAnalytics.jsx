@@ -65,13 +65,13 @@ const ReportsAnalytics = () => {
   const handleExport = () => {
     if (!data) return;
     const exportData = [
-      { Metric: 'Total Revenue', Value: `$${totalRevenue}` },
+      { Metric: 'Total Bills Value', Value: `$${totalRevenue}` },
       { Metric: 'Avg Monthly', Value: `$${avgMonthly}` },
       { Metric: 'Total Users', Value: stats?.totalUsers || 0 },
       { Metric: 'Total Bills', Value: (stats?.activeBills + stats?.paidBills) || 0 },
       ...monthlyData.map(m => ({
         Metric: `Month: ${m.month}`,
-        Value: `Revenue: $${m.revenue}, Bills: ${m.bills}`
+        Value: `Bills Value: $${m.revenue}, Bills Count: ${m.bills}`
       }))
     ];
     exportToCSV('Reports_Analytics', exportData);
@@ -96,7 +96,7 @@ const ReportsAnalytics = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Revenue', value: loading ? '...' : `$${totalRevenue.toLocaleString()}`, icon: DollarSign, cls: 'text-indigo-600' },
+          { label: 'Total Bills Value', value: loading ? '...' : `$${totalRevenue.toLocaleString()}`, icon: DollarSign, cls: 'text-indigo-600' },
           { label: 'Avg Monthly', value: loading ? '...' : `$${avgMonthly.toLocaleString()}`, icon: TrendingUp, cls: 'text-emerald-600' },
           { label: 'Total Users', value: loading ? '...' : stats?.totalUsers || 0, icon: Users, cls: 'text-blue-600' },
           { label: 'Total Bills', value: loading ? '...' : (stats?.activeBills + stats?.paidBills) || 0, icon: FileText, cls: 'text-amber-600' },
@@ -111,7 +111,7 @@ const ReportsAnalytics = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="card xl:col-span-2">
-          <h2 className="font-semibold mb-4">Revenue vs Expenses (Est.)</h2>
+          <h2 className="font-semibold mb-4">Bills vs Expenses (Est.)</h2>
           {loading ? <div className="h-[260px] bg-slate-100 rounded-xl animate-pulse"/> : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={monthlyData}>
@@ -120,7 +120,7 @@ const ReportsAnalytics = () => {
                 <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`}/>
                 <Tooltip formatter={v => [`$${v.toLocaleString()}`, '']}/>
                 <Legend/>
-                <Bar dataKey="revenue" fill="#6366f1" radius={[4,4,0,0]} name="Revenue"/>
+                <Bar dataKey="revenue" fill="#6366f1" radius={[4,4,0,0]} name="Bills Value"/>
                 <Bar dataKey="expenses" fill="#f59e0b" radius={[4,4,0,0]} name="Expenses"/>
               </BarChart>
             </ResponsiveContainer>
@@ -200,12 +200,12 @@ const ReportsAnalytics = () => {
           <table>
             <thead>
               <tr>
-                <th>User Details</th>
-                <th>Status</th>
-                <th>Registration Date</th>
-                <th>Days Registered</th>
-                <th>Total Bills</th>
-                <th>Paid Bills</th>
+                <th>{t('userDetails')}</th>
+                <th>{t('status')}</th>
+                <th>{t('registrationDate')}</th>
+                <th>{t('daysRegistered')}</th>
+                <th>{t('totalBills')}</th>
+                <th>{t('paidBills')}</th>
               </tr>
             </thead>
             <tbody>
@@ -234,11 +234,11 @@ const ReportsAnalytics = () => {
                       </td>
                       <td className="text-xs text-slate-500">{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td className="font-semibold text-slate-800 dark:text-slate-200">
-                        {u.daysActive} {u.daysActive === 1 ? 'maalin' : 'maalmood'}
+                        {u.daysActive} {u.daysActive === 1 ? t('day') : t('days')}
                       </td>
                       <td className="text-slate-600 dark:text-slate-400">{u.totalBills} bills</td>
                       <td>
-                        <span className="badge badge-success text-xs">{u.paidBills} paid</span>
+                        <span className="badge badge-success text-xs">{u.paidBills} {t('paid').toLowerCase()}</span>
                       </td>
                     </tr>
                   ))}

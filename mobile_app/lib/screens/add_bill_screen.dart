@@ -182,8 +182,8 @@ class _AddBillScreenState extends State<AddBillScreen> {
     final data = {
       'title': _titleController.text.trim(),
       'amount': double.parse(_amountController.text),
-      'dueDate': _dueDate.toIso8601String(),
-      'startDate': resolvedStartDate.toIso8601String(),
+      'dueDate': _dueDate.toUtc().toIso8601String(),
+      'startDate': resolvedStartDate.toUtc().toIso8601String(),
       'category': _category,
       'isRecurring': _isRecurring,
       'recurringInterval': _recurringInterval,
@@ -193,7 +193,7 @@ class _AddBillScreenState extends State<AddBillScreen> {
 
     // Only include notificationDate when reminder is ON
     if (_setReminder && _notificationDate != null) {
-      data['notificationDate'] = _notificationDate!.toIso8601String();
+      data['notificationDate'] = _notificationDate!.toUtc().toIso8601String();
     }
 
     try {

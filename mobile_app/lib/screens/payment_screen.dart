@@ -77,7 +77,7 @@ class _PaymentScreenState extends State<PaymentScreen>
     }
 
     final double amount = double.tryParse(amountStr) ?? 0.0;
-    if (amount <= 0.01) {
+    if (amount < 0.01) {
       // Minimum amount check
       _showResultDialog(
         false,

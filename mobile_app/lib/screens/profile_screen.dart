@@ -67,6 +67,19 @@ class ProfileScreen extends StatelessWidget {
                 trailing: const Text('3 days', style: TextStyle(color: Color(0xFF4F46E5), fontWeight: FontWeight.w600))),
             ]),
 
+            // Help & Support Settings
+            _section(lang.t('supportHelp'), [
+              _tile(
+                icon: Icons.chat_bubble_outline,
+                title: lang.t('liveChatSupport'),
+                subtitle: lang.t('contactAdmin'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                onTap: () {
+                  Navigator.of(context).pushNamed('/support');
+                },
+              ),
+            ]),
+
             // About
             _section('About', [
               _tile(icon: Icons.info_outline, title: 'App Version', subtitle: '2.0.0 (Production Ready)'),
@@ -114,13 +127,14 @@ class ProfileScreen extends StatelessWidget {
     ],
   );
 
-  Widget _tile({required IconData icon, required String title, String? subtitle, Widget? trailing}) => ListTile(
+  Widget _tile({required IconData icon, required String title, String? subtitle, Widget? trailing, VoidCallback? onTap}) => ListTile(
     leading: Container(width: 36, height: 36,
         decoration: BoxDecoration(color: const Color(0xFF4F46E5).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
         child: Icon(icon, color: const Color(0xFF4F46E5), size: 18)),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
     subtitle: subtitle != null ? Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)) : null,
     trailing: trailing,
+    onTap: onTap,
   );
 
   Widget _langTile(BuildContext context, LanguageProvider lang, String code, String label) => ListTile(
